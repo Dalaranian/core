@@ -300,3 +300,38 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/windows,macos,linux,intellij,java,eclipse,visualstudiocode
+### Gradle ###
+# Gradle 캐시 디렉토리 및 빌드 산출물
+.gradle/
+**/build/
+!src/**/build/
+
+### Android / Gradle 추가 산출물 ###
+*.class
+build/
+!gradlew
+!gradlew.bat
+
+### Spring Boot ###
+# Spring Boot 실행 산출물 및 임시 파일
+*.hprof
+.attach_pid*
+
+### 환경 변수 / 시크릿 보호 (Spring Security, OAuth2 클라이언트) ###
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+*.pem
+*.p12
+*.jks
+
+### 로컬 데이터베이스 파일 (SQLite/H2 등) ###
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.h2.db
+*.mv.db
