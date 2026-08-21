@@ -14,3 +14,9 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.community.dialect.SQLiteDialect
+
+logging:
+  pattern:
+    # 발생 시점 타임스탬프 + 요청 traceId를 prefix로, 요청 외 로그는 traceId=- 로 표기
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} traceId=%X{traceId:-} [%thread] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} traceId=%X{traceId:-} [%thread] %-5level %logger{36} - %msg%n"
