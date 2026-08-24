@@ -32,7 +32,8 @@ src/
 │   │   └── logging/
 │   │       └── TraceIdFilter.java        # HTTP 요청별 traceId(UUID) MDC 주입 필터
 │   └── resources/
-│       ├── application.yaml              # Spring / JPA / 로깅 설정
+│       ├── application.yaml              # Spring 공통 / 로깅 설정 (DB 접속 제외)
+│       ├── application-dev.yaml          # DEV 전용 설정 (로컬 SQLite)
 │       └── logback-spring.xml            # 콘솔·파일 Appender 및 롤링 정책
 └── test/java/com/template/core/
     ├── CoreApplicationTests.java         # 컨텍스트 로드 스모크 테스트
@@ -57,6 +58,13 @@ gradlew.bat run          # Windows
 ./gradlew run            # macOS / Linux
 ```
 
+기본 실행 프로파일은 `dev`(`application-dev.yaml`)이며, 로컬 SQLite로 동작합니다.
+STG/PROD 등 다른 프로파일로 실행하려면 환경변수로 덮어쓰면 됩니다.
+
+```bash
+SPRING_PROFILES_ACTIVE=stg gradlew.bat run
+```
+
 애플리케이션은 기본 포트 `8080`에서 시작되며, Swagger UI는 다음 경로에서 확인할 수 있습니다.
 
 ```
@@ -74,13 +82,15 @@ gradlew test
 
 ## 설정
 
-주요 설정은 `src/main/resources/application.yaml`에 있습니다.
+환경 공통 설정은 `src/main/resources/application.yaml`, 개발(DEV) 전용 설정은
+`src/main/resources/application-dev.yaml`에 있습니다.
 
 | 키 | 기본값 | 설명 |
 | --- | --- | --- |
 | `spring.application.name` | `core` | 애플리케이션 이름 |
-| `spring.datasource.url` | `jdbc:sqlite:./data/app.db` | SQLite DB 연결 |
-| `spring.jpa.hibernate.ddl-auto` | `update` | 스키마 자동 생성/반영 |
+| `spring.profiles.active` | `dev` | 기본 실행 프로파일 (배포 시 덮어써서 변경) |
+| `spring.datasource.url` | `jdbc:sqlite:./data/app.db` | SQLite DB 연결 (**dev 프로파일**) |
+| `spring.jpa.hibernate.ddl-auto` | `update` | 스키마 자동 생성/반영 (**dev 프로파일**) |
 | `logging.pattern.console/file` | `%d ... traceId=%X{traceId:-} ...` | 로그 출력 패턴 (traceId 포함) |
 
 > 로그 파일 롤링(용량·기간), 최대 이력 보관 정책은 `src/main/resources/logback-spring.xml`의 `LOG_PATH`(기본 `./logs`) 및 롤링 속성으로 조정할 수 있습니다.

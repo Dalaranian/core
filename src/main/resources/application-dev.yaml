@@ -1,0 +1,14 @@
+# 개발(DEV) 전용 설정.
+spring:
+  datasource:
+    url: jdbc:sqlite:./data/app.db
+    driver-class-name: org.sqlite.JDBC
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.community.dialect.SQLiteDialect
