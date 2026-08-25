@@ -12,3 +12,10 @@ spring:
       hibernate:
         format_sql: true
         dialect: org.hibernate.community.dialect.SQLiteDialect
+
+# JWT 서명/만료 설정. secret 은 HS256(최소 32바이트) 요구.
+# 운영 배포 시 반드시 JWT_SECRET 환경변수로 덮어써야 한다.
+jwt:
+  secret: ${JWT_SECRET:dev-only-change-me-0123456789abcdef0123456789abcdef}
+  expiry-seconds: 3600
+  issuer: core-auth

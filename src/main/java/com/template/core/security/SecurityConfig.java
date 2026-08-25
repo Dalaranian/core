@@ -4,18 +4,26 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * Spring Security 필터 체인 설정.
  *
- * <p>아직 골격만 존재하고 필터 체인 구성 로직은 TODO로 남겨 둠.</p>
+ * <p>JWT 기반 무상태(STATELESS) 인증을 사용하므로 세션·폼 로그인·HTTP Basic을 모두 끄고,
+ * 인증 헤더의 Bearer 토큰을 검증하는 {@link JwtAuthenticationFilter}를 앞에 끼운다.</p>
  */
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     /**
      * HTTP 요청에 적용할 보안 필터 체인을 구성한다.
@@ -26,7 +34,16 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        // TODO: csrf, authorizeHttpRequests, formLogin/httpBasic 등 필터 체인 구성
+        http
+                .csrf(csrf -> csrf.disable())
+                // JWT 인증만 사용하므로 폼 로그인/HTTP Basic/세션은 모두 비활성화한다.
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login", "/api/users").permitAll()
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
