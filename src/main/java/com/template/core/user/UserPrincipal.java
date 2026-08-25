@@ -7,18 +7,17 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * {@link UserEntity}를 Spring Security의 {@link UserDetails}로 감싸는 어댑터.
  *
  * <p>현재는 역할(Role) 개념이 없어 권한을 비워 두고, 인증 식별자로 로그인 ID(id)를 사용한다.</p>
  */
+@RequiredArgsConstructor
 public class UserPrincipal implements UserDetails {
 
     private final UserEntity user;
-
-    public UserPrincipal(UserEntity user) {
-        this.user = user;
-    }
 
     /** 로그인 ID(id)를 사용자명으로 사용한다. */
     @Override

@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,6 +21,8 @@ import lombok.NoArgsConstructor;
  */
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@AllArgsConstructor(access = AccessLevel.PRIVATE)
+@Builder
 @Entity
 @Table(name = "users")
 public class UserEntity {
@@ -41,11 +44,4 @@ public class UserEntity {
     /** 사용자 이름 */
     @Column(name = "user_name", nullable = false, length = 50)
     private String userName;
-
-    @Builder
-    public UserEntity(String id, String pw, String userName) {
-        this.id = id;
-        this.pw = pw;
-        this.userName = userName;
-    }
 }

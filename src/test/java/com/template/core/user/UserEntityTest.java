@@ -23,7 +23,11 @@ class UserEntityTest {
 
     @Test
     void 저장시_시퀀스_자동발급() {
-        UserEntity user = new UserEntity("test-user", "plain-pw", "홍길동");
+        UserEntity user = UserEntity.builder()
+                .id("test-user")
+                .pw("plain-pw")
+                .userName("홍길동")
+                .build();
 
         em.persist(user);
         em.flush();
