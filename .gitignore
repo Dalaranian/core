@@ -335,3 +335,6 @@ application-local.yml
 *.sqlite3
 *.h2.db
 *.mv.db
+
+### Git 번들/백업 (개인 이력 포함 가능) ###
+*.bundle
