@@ -81,4 +81,14 @@ class UserServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("사용자를 찾을 수 없습니다");
     }
+
+    @Test
+    void 가입하면_회원상태가_활성화_코드10으로_저장된다() {
+        userService.join(new UserJoinRequest("erin", "plain-pw", "에린"));
+
+        UserEntity saved = userRepository.findByLoginId("erin").orElseThrow();
+
+        assertThat(saved.getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(saved.getStatus().getCode()).isEqualTo(10);
+    }
 }

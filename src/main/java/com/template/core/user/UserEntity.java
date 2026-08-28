@@ -1,6 +1,7 @@
 package com.template.core.user;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -44,4 +45,19 @@ public class UserEntity {
     /** 사용자 이름 */
     @Column(name = "user_name", nullable = false, length = 50)
     private String userName;
+
+    /**
+     * 회원 상태. 신규 가입 시 활성화(ACTIVE)가 기본값.
+     * DB에는 코드값(10/20)으로 저장되며, columnDefinition의 default 10은
+     * status 컬럼 추가 이전의 기존 데이터를 활성화 회원으로 채우기 위한 것이다.
+     */
+    @Builder.Default
+    @Convert(converter = UserStatus.CodeConverter.class)
+    @Column(name = "status", nullable = false, columnDefinition = "integer default 10")
+    private UserStatus status = UserStatus.ACTIVE;
+
+    /** 회원을 탈퇴 상태(WITHDRAWN)로 변경한다. */
+    public void withdraw() {
+        this.status = UserStatus.WITHDRAWN;
+    }
 }
