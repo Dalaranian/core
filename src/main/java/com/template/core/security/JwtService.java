@@ -6,7 +6,6 @@ import java.util.Date;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.template.core.user.UserEntity;
@@ -19,31 +18,30 @@ import io.jsonwebtoken.security.Keys;
  *
  * <p>로그인 성공 시 HS256으로 서명한 JWT를 발급하고, 이후 요청에서
  * Bearer 토큰을 검증해 사용자 식별자(subject=로그인 ID)를 추출한다.</p>
+ *
+ * <p>설정값은 {@link JwtProperties} 레코드로 묶어 주입받는다.</p>
  */
 @Service
 public class JwtService {
 
     private final SecretKey key;
-    private final long expirySeconds;
-    private final String issuer;
+    private final JwtProperties props;
 
-    public JwtService(@Value("${jwt.secret}") String secret,
-                      @Value("${jwt.expiry-seconds}") long expirySeconds,
-                      @Value("${jwt.issuer}") String issuer) {
-        this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-        this.expirySeconds = expirySeconds;
-        this.issuer = issuer;
+    public JwtService(JwtProperties props) {
+        this.props = props;
+        // secret이 HS256 최소 길이(256bit) 미만이면 여기서 WeakKeyException이 발생해 시작이 실패한다.
+        this.key = Keys.hmacShaKeyFor(props.secret().getBytes(StandardCharsets.UTF_8));
     }
 
     /** 로그인 성공한 사용자에게 JWT를 발급한다. */
     public String createToken(UserEntity user) {
         Instant now = Instant.now();
         return Jwts.builder()
-                .issuer(issuer)
+                .issuer(props.issuer())
                 .subject(user.getId())
                 .claim("seq", user.getSeq())
                 .issuedAt(Date.from(now))
-                .expiration(Date.from(now.plusSeconds(expirySeconds)))
+                .expiration(Date.from(now.plusSeconds(props.expirySeconds())))
                 .signWith(key)
                 .compact();
     }
@@ -57,7 +55,7 @@ public class JwtService {
         try {
             return Jwts.parser()
                     .verifyWith(key)
-                    .requireIssuer(issuer)
+                    .requireIssuer(props.issuer())
                     .build()
                     .parseSignedClaims(token)
                     .getPayload()
