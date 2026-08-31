@@ -39,7 +39,6 @@ public class JwtService {
         return Jwts.builder()
                 .issuer(props.issuer())
                 .subject(user.getId())
-                .claim("seq", user.getSeq())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plusSeconds(props.expirySeconds())))
                 .signWith(key)
