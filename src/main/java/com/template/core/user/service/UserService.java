@@ -1,10 +1,12 @@
-package com.template.core.user;
+package com.template.core.user.service;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.template.core.security.JwtService;
+import com.template.core.user.UserEntity;
+import com.template.core.user.UserRepository;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
 import com.template.core.user.dto.UserJoinRequest;

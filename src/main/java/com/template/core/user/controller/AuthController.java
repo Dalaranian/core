@@ -1,10 +1,11 @@
-package com.template.core.user;
+package com.template.core.user.controller;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.template.core.user.service.UserService;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
 

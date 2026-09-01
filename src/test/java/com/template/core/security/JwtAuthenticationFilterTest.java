@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.template.core.user.UserEntity;
 import com.template.core.user.UserRepository;
-import com.template.core.user.UserService;
+import com.template.core.user.service.UserService;
 import com.template.core.user.dto.UserJoinRequest;
 
 /**

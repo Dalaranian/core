@@ -1,4 +1,4 @@
-package com.template.core.user;
+package com.template.core.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -9,6 +9,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.template.core.user.UserEntity;
+import com.template.core.user.UserRepository;
+import com.template.core.user.UserStatus;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
 import com.template.core.user.dto.UserJoinRequest;

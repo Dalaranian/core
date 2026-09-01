@@ -47,15 +47,22 @@ src/
 │   │   ├── security/
 │   │   │   └── SecurityConfig.java       # 보안 필터 체인, PasswordEncoder
 │   │   └── user/
-│   │       ├── UserController.java       # 회원 관리 REST 엔드포인트
-│   │       ├── UserService.java          # 회원 가입 비즈니스 로직
+│   │       ├── controller/
+│   │       │   ├── UserController.java   # 회원 관리 REST 엔드포인트
+│   │       │   └── AuthController.java   # 로그인(JWT 발급) REST 엔드포인트
+│   │       ├── service/
+│   │       │   ├── UserService.java      # 회원 가입·로그인 비즈니스 로직
+│   │       │   └── CustomUserDetailsService.java # 인증용 UserDetails 조회
+│   │       ├── principal/
+│   │       │   └── UserPrincipal.java    # UserDetails 어댑터
+│   │       ├── dto/
+│   │       │   ├── LoginRequest.java     # 로그인 요청 DTO
+│   │       │   ├── LoginResponse.java    # 로그인(JWT) 응답 DTO
+│   │       │   ├── UserJoinRequest.java  # 가입 요청 DTO
+│   │       │   └── UserJoinResponse.java # 가입 응답 DTO
 │   │       ├── UserEntity.java           # 사용자 엔티티 (SQLite)
 │   │       ├── UserRepository.java       # JPA 리포지토리
-│   │       ├── CustomUserDetailsService.java # 인증용 UserDetails 조회
-│   │       ├── UserPrincipal.java        # UserDetails 어댑터
-│   │       └── dto/
-│   │           ├── UserJoinRequest.java  # 가입 요청 DTO
-│   │           └── UserJoinResponse.java # 가입 응답 DTO
+│   │       └── UserStatus.java           # 회원 상태 enum·코드 변환기
 │   └── resources/
 │       ├── application.yaml              # Spring 공통 / 로깅 설정 (DB 접속 제외)
 │       ├── application-dev.yaml          # DEV 전용 설정 (로컬 SQLite)
@@ -66,7 +73,8 @@ src/
     │   └── TraceIdFilterTests.java       # traceId 발급·정리 검증 테스트
     └── user/
         ├── UserEntityTest.java           # 엔티티 검증 테스트
-        └── UserServiceTest.java          # 회원 가입 비즈니스 로직 테스트
+        └── service/
+            └── UserServiceTest.java      # 회원 가입·로그인 비즈니스 로직 테스트
 ```
 
 ## 시작하기

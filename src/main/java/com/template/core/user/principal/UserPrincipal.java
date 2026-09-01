@@ -1,4 +1,4 @@
-package com.template.core.user;
+package com.template.core.user.principal;
 
 import java.util.Collection;
 import java.util.List;
@@ -6,6 +6,8 @@ import java.util.List;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import com.template.core.user.UserEntity;
 
 import lombok.RequiredArgsConstructor;
 
