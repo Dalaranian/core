@@ -17,5 +17,6 @@ spring:
 # 운영 배포 시 반드시 JWT_SECRET 환경변수로 덮어써야 한다.
 jwt:
   secret: ${JWT_SECRET:dev-only-change-me-0123456789abcdef0123456789abcdef}
-  expiry-seconds: 3600
+  # 개발 환경은 테스트 편의를 위해 토큰 유효기간을 하루(24h)로 설정한다.
+  expiry-seconds: 86400
   issuer: core-auth
