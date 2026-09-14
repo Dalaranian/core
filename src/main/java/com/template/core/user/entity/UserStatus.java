@@ -1,4 +1,4 @@
-package com.template.core.user;
+package com.template.core.user.entity;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;

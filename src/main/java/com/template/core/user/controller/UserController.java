@@ -1,5 +1,7 @@
 package com.template.core.user.controller;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,13 +11,14 @@ import com.template.core.common.response.ApiResponse;
 import com.template.core.user.service.UserService;
 import com.template.core.user.dto.UserJoinRequest;
 import com.template.core.user.dto.UserJoinResponse;
+import com.template.core.user.dto.WithdrawRequest;
 
 import lombok.RequiredArgsConstructor;
 
 /**
  * 회원 관리용 컨트롤러.
  *
- * <p>현재는 회원 가입만 제공하며, 로그인(JWT 발급)은 다음 단계에서 추가한다.</p>
+ * <p>회원 가입과 탈퇴(본인 확인 후 상태 변경)를 제공하며, 로그인(JWT 발급)은 AuthController가 담당한다.</p>
  */
 @RestController
 @RequiredArgsConstructor
@@ -28,5 +31,16 @@ public class UserController {
     @PostMapping
     public ApiResponse<UserJoinResponse> join(@RequestBody UserJoinRequest request) {
         return ApiResponse.success(userService.join(request));
+    }
+
+    /**
+     * 회원 탈퇴. 인증 주체(로그인 ID)와 요청 본문의 비밀번호로 본인을 확인한 뒤
+     * 탈퇴 상태로 변경한다. 실제 데이터 삭제는 익일 자정 배치가 수행한다.
+     */
+    @DeleteMapping("/me")
+    public ApiResponse<Void> withdraw(Authentication authentication,
+            @RequestBody WithdrawRequest request) {
+        userService.withdraw(authentication.getName(), request);
+        return ApiResponse.success(null);
     }
 }

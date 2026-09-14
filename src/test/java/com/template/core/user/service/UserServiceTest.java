@@ -18,13 +18,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.template.core.security.JwtService;
-import com.template.core.user.UserEntity;
-import com.template.core.user.UserRepository;
-import com.template.core.user.UserStatus;
+import com.template.core.user.entity.UserEntity;
+import com.template.core.user.repository.UserRepository;
+import com.template.core.user.entity.UserStatus;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
 import com.template.core.user.dto.UserJoinRequest;
 import com.template.core.user.dto.UserJoinResponse;
+import com.template.core.user.dto.WithdrawRequest;
 
 /**
  * UserService 비즈니스 로직 단위 테스트.
@@ -138,6 +139,64 @@ class UserServiceTest {
         assertThatThrownBy(() -> userService.login(new LoginRequest("dave", "wrong-pw")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("비밀번호가 일치하지 않습니다");
+    }
+
+    @Test
+    @DisplayName("올바른 비밀번호로 탈퇴하면 상태가 WITHDRAWN으로 변경된다")
+    void withdraw_WithCorrectPassword_MarksUserWithdrawn() {
+        // given: 활성 회원과 일치하는 비밀번호를 준비한다
+        UserEntity user = UserEntity.builder()
+                .id("frank")
+                .pw("encoded-pw")
+                .userName("프랭크")
+                .build();
+        when(userRepository.findByLoginId("frank")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("plain-pw", "encoded-pw")).thenReturn(true);
+
+        // when: 탈퇴를 실행한다
+        userService.withdraw("frank", new WithdrawRequest("plain-pw"));
+
+        // then: 상태가 WITHDRAWN(코드 20)으로 변경되고 탈퇴 시각이 기록된다
+        assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
+        assertThat(user.getStatus().getCode()).isEqualTo(20);
+        assertThat(user.getWithdrawnAt()).isNotNull();
+    }
+
+    @Test
+    @DisplayName("틀린 비밀번호로 탈퇴하면 예외가 발생하고 상태는 유지된다")
+    void withdraw_WithWrongPassword_ThrowsException() {
+        // given: 비밀번호 대조가 실패한다
+        UserEntity user = UserEntity.builder()
+                .id("grace")
+                .pw("encoded-pw")
+                .userName("그레이스")
+                .build();
+        when(userRepository.findByLoginId("grace")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong-pw", "encoded-pw")).thenReturn(false);
+
+        // when & then: IllegalArgumentException이 발생하고 상태는 ACTIVE로 유지된다
+        assertThatThrownBy(() -> userService.withdraw("grace", new WithdrawRequest("wrong-pw")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("비밀번호가 일치하지 않습니다");
+        assertThat(user.getStatus()).isEqualTo(UserStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("탈퇴(WITHDRAWN) 상태 회원이 로그인하면 예외가 발생한다")
+    void login_WithWithdrawnUser_ThrowsException() {
+        // given: 탈퇴 상태 회원을 준비한다
+        UserEntity user = UserEntity.builder()
+                .id("hank")
+                .pw("encoded-pw")
+                .userName("행크")
+                .build();
+        user.withdraw();
+        when(userRepository.findByLoginId("hank")).thenReturn(Optional.of(user));
+
+        // when & then: 로그인 시 IllegalStateException이 발생한다
+        assertThatThrownBy(() -> userService.login(new LoginRequest("hank", "plain-pw")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("이미 탈퇴한 회원입니다");
     }
 
     @Test

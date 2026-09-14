@@ -5,12 +5,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.template.core.security.JwtService;
-import com.template.core.user.UserEntity;
-import com.template.core.user.UserRepository;
+import com.template.core.user.entity.UserEntity;
+import com.template.core.user.entity.UserStatus;
+import com.template.core.user.repository.UserRepository;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
 import com.template.core.user.dto.UserJoinRequest;
 import com.template.core.user.dto.UserJoinResponse;
+import com.template.core.user.dto.WithdrawRequest;
 
 import lombok.RequiredArgsConstructor;
 
@@ -50,6 +52,29 @@ public class UserService {
     }
 
     /**
+     * 회원 탈퇴를 처리한다.
+     *
+     * <p>본인 확인을 위해 비밀번호를 대조한 뒤, 상태를 WITHDRAWN으로 변경하고
+     * 탈퇴 신청 시각을 기록한다. 실제 데이터 삭제는 익일 자정 배치가 담당한다.</p>
+     *
+     * @param loginId 탈퇴 요청 사용자의 로그인 ID (인증 주체)
+     * @param request 비밀번호 재확인 요청
+     * @throws IllegalArgumentException 사용자가 없거나 비밀번호가 일치하지 않을 때
+     */
+    @Transactional
+    public void withdraw(String loginId, WithdrawRequest request) {
+        UserEntity user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "사용자를 찾을 수 없습니다. id=" + loginId));
+
+        if (!passwordEncoder.matches(request.pw(), user.getPw())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        user.withdraw();
+    }
+
+    /**
      * 로그인을 처리하고 JWT를 발급한다.
      *
      * <p>로그인 ID로 사용자를 찾아 BCrypt로 비밀번호를 대조하고, 성공 시
@@ -58,12 +83,17 @@ public class UserService {
      * @param request 로그인 요청 정보
      * @return 발급된 accessToken을 포함한 로그인 응답
      * @throws IllegalArgumentException 사용자가 없거나 비밀번호가 일치하지 않을 때
+     * @throws IllegalStateException 탈퇴(WITHDRAWN) 상태 회원일 때
      */
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         UserEntity user = userRepository.findByLoginId(request.id())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "사용자를 찾을 수 없습니다. id=" + request.id()));
+
+        if (user.getStatus() == UserStatus.WITHDRAWN) {
+            throw new IllegalStateException("이미 탈퇴한 회원입니다. id=" + request.id());
+        }
 
         if (!passwordEncoder.matches(request.pw(), user.getPw())) {
             throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");

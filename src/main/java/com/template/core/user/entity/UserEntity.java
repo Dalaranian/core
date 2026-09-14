@@ -1,4 +1,4 @@
-package com.template.core.user;
+package com.template.core.user.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -56,8 +57,13 @@ public class UserEntity {
     @Column(name = "status", nullable = false, columnDefinition = "integer default 10")
     private UserStatus status = UserStatus.ACTIVE;
 
-    /** 회원을 탈퇴 상태(WITHDRAWN)로 변경한다. */
+    /** 탈퇴 신청 시각. 탈퇴 배치가 익일 자정에 이 시각 기준으로 데이터를 삭제한다. */
+    @Column(name = "withdrawn_at")
+    private LocalDateTime withdrawnAt;
+
+    /** 회원을 탈퇴 상태(WITHDRAWN)로 변경하고 탈퇴 신청 시각을 기록한다. */
     public void withdraw() {
         this.status = UserStatus.WITHDRAWN;
+        this.withdrawnAt = LocalDateTime.now();
     }
 }
