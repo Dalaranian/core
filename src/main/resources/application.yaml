@@ -17,3 +17,17 @@ user:
   withdrawal:
     grace-days: 1
     delete-cron: "0 0 0 * * *"
+
+# 액추에이터: 익명 노출이 안전한 health, info만 웹으로 노출한다.
+# metrics/env 등은 URI 통계·프로퍼티가 드러나므로 운영에서 인증 뒤에 별도 노출.
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      # DB 등 컴포넌트 상태까지 헬스체크로 확인
+      show-details: always
+    grace-days: 1
+    delete-cron: "0 0 0 * * *"

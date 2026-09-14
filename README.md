@@ -2,146 +2,123 @@
 
 SSL 서비스용 **Spring 백엔드 보일러플레이트** 프로젝트입니다.
 
-REST API 서버를 만들 때마다 반복 작성하게 되는 인프라/공통 코드(traceId 로깅, 보안 설정, 회원 관리 골격 등)를
-미리 작성해 두어, **실제 프로젝트를 시작할 때는 바로 비즈니스 로직 작성에만 집중**할 수 있도록 하는 것이 목적입니다.
+REST API 서버를 시작할 때마다 반복 작성하게 되는 공통 코드(트레이싱, 인증, 회원 골격, 공통 응답 등)를
+미리 작성해 두어, **비즈니스 로직 작성에만 집중**할 수 있게 하는 것이 목적입니다.
 
 ## 제공되는 보일러플레이트
 
-- **traceId 로깅**: HTTP 요청마다 고유 UUID(`traceId`)를 자동 부여해 요청 단위로 로그를 추적
-- **회원 관리 골격**: 회원 가입 API와 BCrypt 비밀번호 해시 저장
-- **보안 설정 골격**: Spring Security 필터 체인, `UserDetailsService` 인증 연동
-- **SQLite 영속화**: JPA 기반 영속화로 별도 DB 설치 없이 바로 동작
+- **traceId 로깅**: 요청마다 UUID(`traceId`)를 MDC에 주입해 로그 추적 (콘솔/파일 롤링)
+- **JWT 인증**: 로그인 시 HS256 토큰 발급, 필터에서 검증 (`JwtService` / `JwtAuthenticationFilter`)
+- **회원 관리 골격**: 가입(`POST /api/users`), 로그인(`POST /api/auth/login`), 탈퇴(`DELETE /api/users/me`)
+- **회원 탈퇴 유예**: 탈퇴 시 즉시 삭제하지 않고 유예 기간 후 매일 자정 배치로 제거 (`WithdrawalCleanupScheduler`)
+- **공통 응답/에러**: `ApiResponse` 래퍼와 `GlobalExceptionHandler` 표준 에러 응답
+- **SQLite 영속화**: JPA 기반, 별도 DB 설치 없이 바로 동작
 
 ## 기술 스택
 
-- **언어/런타임**: Java 21
-- **프레임워크**: Spring Boot 4.0.7
-- **빌드 도구**: Gradle
-- **데이터베이스**: SQLite (JPA / Hibernate 연동)
-- **보안**: Spring Security, OAuth2 Client
-- **API 문서**: springdoc-openapi 3 (Swagger UI)
-- **기타**: Lombok, Actuator
-- **테스트**: JUnit 5, AssertJ
-
-## 주요 기능
-
-- **traceId 로깅**: `TraceIdFilter`가 `OncePerRequestFilter`로 동작하여 HTTP 요청마다
-  새 UUID(`traceId`)를 SLF4J MDC에 주입합니다. 응답 후에는 반드시 MDC에서 제거하여
-  스레드 풀 재사용 시 요청 간 로그 오염을 방지합니다.
-- **콘솔/파일 로깅**: `logback-spring.xml`에서 일자·용량별 롤링 정책(10MB / 30일 / 1GB 상한)에 따라
-  로그 파일을 `./logs/application.log`에 기록하고, 로그 패턴에 traceId를 포함합니다.
-- **보안/인증**: `SecurityConfig`가 BCrypt `PasswordEncoder`를 제공하고,
-  `CustomUserDetailsService`가 로그인 ID로 사용자를 조회해 Spring Security 인증에 연결합니다.
-- **회원 가입**: `POST /api/users` 회원 가입 API가 ID 중복 확인 후 BCrypt 해시로 비밀번호를 저장합니다.
-- **SQLite 영속화**: JPA `ddl-auto: update` 설정으로 스키마를 자동 반영합니다.
+- Java 21 / Spring Boot 4.0.7 / Gradle
+- 데이터베이스: SQLite (JPA / Hibernate community dialect)
+- 보안: Spring Security, JJWT 0.12.6
+- API 문서: springdoc-openapi 3 (Swagger UI)
+- 기타: Lombok, Actuator / 테스트: JUnit 5, AssertJ
 
 ## 프로젝트 구조
 
 ```
-src/
-├── main/
-│   ├── java/com/template/core/
-│   │   ├── CoreApplication.java          # Spring Boot 진입점
-│   │   ├── logging/
-│   │   │   └── TraceIdFilter.java        # HTTP 요청별 traceId(UUID) MDC 주입 필터
-│   │   ├── security/
-│   │   │   └── SecurityConfig.java       # 보안 필터 체인, PasswordEncoder
-│   │   └── user/
-│   │       ├── controller/
-│   │       │   ├── UserController.java   # 회원 관리 REST 엔드포인트
-│   │       │   └── AuthController.java   # 로그인(JWT 발급) REST 엔드포인트
-│   │       ├── service/
-│   │       │   ├── UserService.java      # 회원 가입·로그인 비즈니스 로직
-│   │       │   └── CustomUserDetailsService.java # 인증용 UserDetails 조회
-│   │       ├── principal/
-│   │       │   └── UserPrincipal.java    # UserDetails 어댑터
-│   │       ├── dto/
-│   │       │   ├── LoginRequest.java     # 로그인 요청 DTO
-│   │       │   ├── LoginResponse.java    # 로그인(JWT) 응답 DTO
-│   │       │   ├── UserJoinRequest.java  # 가입 요청 DTO
-│   │       │   └── UserJoinResponse.java # 가입 응답 DTO
-│   │       ├── UserEntity.java           # 사용자 엔티티 (SQLite)
-│   │       ├── UserRepository.java       # JPA 리포지토리
-│   │       └── UserStatus.java           # 회원 상태 enum·코드 변환기
-│   └── resources/
-│       ├── application.yaml              # Spring 공통 / 로깅 설정 (DB 접속 제외)
-│       ├── application-dev.yaml          # DEV 전용 설정 (로컬 SQLite)
-│       └── logback-spring.xml            # 콘솔·파일 Appender 및 롤링 정책
-└── test/java/com/template/core/
-    ├── CoreApplicationTests.java         # 컨텍스트 로드 스모크 테스트
-    ├── logging/
-    │   └── TraceIdFilterTests.java       # traceId 발급·정리 검증 테스트
-    └── user/
-        ├── UserEntityTest.java           # 엔티티 검증 테스트
-        └── service/
-            └── UserServiceTest.java      # 회원 가입·로그인 비즈니스 로직 테스트
+src/main/java/com/template/core/
+├── CoreApplication.java              # Spring Boot 진입점
+├── common/
+│   ├── error/                        # GlobalExceptionHandler, ErrorResponse
+│   └── response/                     # ApiResponse 공통 응답 래퍼
+├── logging/TraceIdFilter.java        # 요청별 traceId(UUID) MDC 주입 필터
+├── security/
+│   ├── SecurityConfig.java           # 보안 필터 체인, PasswordEncoder
+│   ├── JwtService.java               # JWT 발급/검증
+│   ├── JwtProperties.java            # jwt.* 설정 바인딩
+│   └── JwtAuthenticationFilter.java  # Authorization 헤더 토큰 인증 필터
+└── user/
+    ├── controller/                   # UserController(가입/탈퇴), AuthController(로그인)
+    ├── service/                      # UserService, CustomUserDetailsService
+    ├── principal/UserPrincipal.java  # UserDetails 어댑터
+    ├── dto/                          # 가입/로그인/탈퇴 요청·응답 DTO
+    ├── entity/                       # UserEntity, UserStatus
+    ├── repository/UserRepository.java
+    ├── WithdrawalCleanupScheduler.java  # 유예기간 경과 회원 삭제 배치(매일 자정)
+    └── WithdrawalProperties.java     # user.withdrawal.* 설정 바인딩
+src/main/resources/
+├── application.yaml                  # 공통 설정 (프로파일, 로깅, 탈퇴 정책)
+├── application-dev.yaml              # DEV 전용 (SQLite, JWT 설정)
+└── logback-spring.xml                # 콘솔·파일 롤링 (10MB / 30일 / 1GB)
 ```
+
+테스트는 `src/test/java/com/template/core/` 하위에 주요 컴포넌트별로 위치합니다
+(traceId, JWT 필터, 전역 예외 처리, 회원 서비스, 탈퇴 배치, 컨텍스트 스모크).
 
 ## 시작하기
 
-### 요구 사항
-
-- Java 21 이상
-- Gradle (또는 포함된 Gradle Wrapper 사용)
-
-### 실행
-
-프로젝트 루트에서 아래 명령을 실행합니다.
+- 요구 사항: Java 21 이상
 
 ```bash
-gradlew.bat run          # Windows
-# 또는
-./gradlew run            # macOS / Linux
+gradlew.bat run   # Windows (macOS/Linux: ./gradlew run)
+gradlew.bat test
 ```
 
-기본 실행 프로파일은 `dev`(`application-dev.yaml`)이며, 로컬 SQLite로 동작합니다.
-STG/PROD 등 다른 프로파일로 실행하려면 환경변수로 덮어쓰면 됩니다.
+기본 프로파일은 `dev`(로컬 SQLite, 포트 `8080`)이며, 다른 프로파일은 환경변수로 덮어씁니다:
+`SPRING_PROFILES_ACTIVE=stg gradlew.bat run`
 
-```bash
-SPRING_PROFILES_ACTIVE=stg gradlew.bat run
-```
+Swagger UI: `http://localhost:8080/swagger-ui.html`
 
-애플리케이션은 기본 포트 `8080`에서 시작되며, Swagger UI는 다음 경로에서 확인할 수 있습니다.
-
-```
-http://localhost:8080/swagger-ui.html
-```
-
-### 테스트
-
-```bash
-gradlew test
-```
-
-- `TraceIdFilterTests`: 요청마다 서로 다른 UUID가 부여되고, 요청 종료 후 MDC에서 제거되는지 검증합니다.
-- `UserServiceTest`: 회원 가입 시 중복 ID 검출, BCrypt 비밀번호 해시 저장 여부를 검증합니다.
-- `CoreApplicationTests`: Spring 컨텍스트가 정상 로드되는지 확인하는 스모크 테스트입니다.
-
-## 설정
-
-환경 공통 설정은 `src/main/resources/application.yaml`, 개발(DEV) 전용 설정은
-`src/main/resources/application-dev.yaml`에 있습니다.
+## 주요 설정
 
 | 키 | 기본값 | 설명 |
 | --- | --- | --- |
-| `spring.application.name` | `core` | 애플리케이션 이름 |
-| `spring.profiles.active` | `dev` | 기본 실행 프로파일 (배포 시 덮어써서 변경) |
-| `spring.datasource.url` | `jdbc:sqlite:./data/app.db` | SQLite DB 연결 (**dev 프로파일**) |
-| `spring.jpa.hibernate.ddl-auto` | `update` | 스키마 자동 생성/반영 (**dev 프로파일**) |
-| `logging.pattern.console/file` | `%d ... traceId=%X{traceId:-} ...` | 로그 출력 패턴 (traceId 포함) |
+| `spring.profiles.active` | `dev` | 기본 프로파일 (배포 시 덮어씀) |
+| `spring.datasource.url` | `jdbc:sqlite:./data/app.db` | SQLite 연결 (dev) |
+| `spring.jpa.hibernate.ddl-auto` | `update` | 스키마 자동 반영 (dev) |
+| `jwt.secret` | dev 기본값 | HS256 서명 키. **운영 시 `JWT_SECRET` 환경변수로 필수 덮어쓰기** (최소 32바이트) |
+| `jwt.expiry-seconds` | `86400` | 토큰 유효기간(초) |
+| `user.withdrawal.grace-days` | `1` | 탈퇴 유예 일수 (1 = 익일 자정 삭제) |
+| `user.withdrawal.delete-cron` | `0 0 0 * * *` | 탈퇴 삭제 배치 실행 시각 |
 
-> 로그 파일 롤링(용량·기간), 최대 이력 보관 정책은 `src/main/resources/logback-spring.xml`의 `LOG_PATH`(기본 `./logs`) 및 롤링 속성으로 조정할 수 있습니다.
+> 로그 롤링 정책(용량·기간)은 `src/main/resources/logback-spring.xml`의 `LOG_PATH`(기본 `./logs`) 및 롤링 속성으로 조정할 수 있습니다.
 
-## 환경 변수 (보안)
+## 액추에이터
 
-`.env` 또는 환경 변수에 보안 관련 설정을 주입하여 사용할 수 있습니다. 예시와 비밀 값 템플릿은 `.env.example`을 참고하고, 실제 비밀값은 커밋하지 마십시오. (`.env*`, `.pem`, `.p12`, `.jks` 등은 `.gitignore`로 제외되어 있습니다.)
+Actuator 스타터가 포함되어 있으며, **익명 노출이 안전한 엔드포인트만 웹으로 노출**합니다.
+JWT 인증 뒤에서도 접근 가능하도록 `SecurityConfig`의 `permitAll`에 등록되어 있습니다.
+
+| 엔드포인트 | 설명 |
+| --- | --- |
+| `GET /actuator/health` | 애플리케이션·DB 등 컴포넌트 상태 (`show-details: always`). 로드밸런서/컴포즈 헬스체크용 |
+| `GET /actuator/info` | 빌드 정보 등 (기본 비어 있음) |
+
+설정 위치: `application.yaml`의 `management.*`
+
+```yaml
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+```
+
+`metrics`, `env`, `loggers` 등 민감 정보가 담기는 엔드포인트는 의도적으로 노출하지 않았습니다.
+필요 시 `include`에 추가하고, 반드시 Spring Security 인증 뒤에서만 접근하도록 관리하세요
+(`permitAll`에 등록하지 않으면 기본적으로 JWT 인증을 요구합니다).
+
+## 보안 환경 변수
+
+JWT secret 등 비밀 값은 환경 변수로 주입합니다(`JWT_SECRET` 등). 실제 비밀 값은 커밋하지 마십시오
+(`.env*`, `.pem`, `.p12`, `.jks` 등은 `.gitignore`로 제외되어 있습니다).
 
 ## 새 프로젝트 적용 방법
 
 1. 이 템플릿을 복사합니다.
-2. `com.template.core` 패키지명, `settings.gradle`의 프로젝트명을 실제 프로젝트에 맞게 변경합니다.
-3. `UserEntity` 등 도메인 엔티티를 확장하거나 새 도메인을 추가합니다.
-4. 이후에는 `Controller` → `Service` → `Repository` 에 비즈니스 로직만 작성하면 됩니다.
+2. `com.template.core` 패키지명과 `settings.gradle`의 프로젝트명을 실제 프로젝트에 맞게 변경합니다.
+3. 이후에는 `Controller` → `Service` → `Repository`에 비즈니스 로직만 작성하면 됩니다.
 
 ## 관련 문서
 
