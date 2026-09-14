@@ -17,9 +17,9 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import com.template.core.user.UserEntity;
-import com.template.core.user.UserRepository;
-import com.template.core.user.UserStatus;
+import com.template.core.user.entity.UserEntity;
+import com.template.core.user.repository.UserRepository;
+import com.template.core.user.entity.UserStatus;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;

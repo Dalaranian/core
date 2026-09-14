@@ -8,7 +8,7 @@ import javax.crypto.SecretKey;
 
 import org.springframework.stereotype.Service;
 
-import com.template.core.user.UserEntity;
+import com.template.core.user.entity.UserEntity;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;

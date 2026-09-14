@@ -1,6 +1,6 @@
 package com.template.core.user.dto;
 
-import com.template.core.user.UserEntity;
+import com.template.core.user.entity.UserEntity;
 
 /**
  * 로그인 응답 DTO.

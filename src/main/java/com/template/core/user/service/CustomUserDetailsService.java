@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.template.core.user.principal.UserPrincipal;
-import com.template.core.user.UserRepository;
+import com.template.core.user.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 

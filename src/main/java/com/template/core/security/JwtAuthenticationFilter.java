@@ -9,8 +9,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.template.core.user.UserRepository;
-import com.template.core.user.UserStatus;
+import com.template.core.user.repository.UserRepository;
+import com.template.core.user.entity.UserStatus;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

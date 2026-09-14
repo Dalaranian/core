@@ -1,4 +1,4 @@
-package com.template.core.user;
+package com.template.core.user.entity;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
