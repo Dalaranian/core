@@ -11,3 +11,9 @@ logging:
     # 발생 시점 타임스탬프 + 요청 traceId를 prefix로, 요청 외 로그는 traceId=- 로 표기
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} traceId=%X{traceId:-} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} traceId=%X{traceId:-} [%thread] %-5level %logger{36} - %msg%n"
+
+# 회원 탈퇴 설정. grace-days=1 이면 "탈퇴 신청일 익일 자정"에 삭제 배치가 데이터를 제거한다.
+user:
+  withdrawal:
+    grace-days: 1
+    delete-cron: "0 0 0 * * *"

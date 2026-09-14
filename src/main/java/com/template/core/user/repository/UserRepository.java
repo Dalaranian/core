@@ -1,7 +1,12 @@
-package com.template.core.user;
+package com.template.core.user.repository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
+import com.template.core.user.entity.UserEntity;
+import com.template.core.user.entity.UserStatus;
+
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -23,4 +28,15 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
     /** 로그인 ID(id)가 이미 존재하는지 확인한다. */
     @Query("select count(u) > 0 from UserEntity u where u.id = :loginId")
     boolean existsByLoginId(@Param("loginId") String loginId);
+
+    /**
+     * 탈퇴 상태이면서 지정 시점(cutoff) 이전에 탈퇴 신청한 회원을 삭제한다.
+     *
+     * @param cutoff 삭제 대상 기준 시각. 이 시각보다 이전에 탈퇴 신청한 회원만 삭제한다.
+     * @return 삭제된 건수
+     */
+    @Modifying
+    @Query("delete from UserEntity u where u.status = com.template.core.user.entity.UserStatus.WITHDRAWN"
+            + " and u.withdrawnAt < :cutoff")
+    int deleteWithdrawnBefore(@Param("cutoff") LocalDateTime cutoff);
 }
