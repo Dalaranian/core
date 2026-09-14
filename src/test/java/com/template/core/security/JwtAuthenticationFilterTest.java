@@ -50,13 +50,13 @@ class JwtAuthenticationFilterTest {
     private JwtAuthenticationFilter filter;
 
     @BeforeEach
-    void 보안컨텍스트_초기화() {
+    void setUpSecurityContext() {
         // 테스트 간 SecurityContext 오염을 방지한다
         SecurityContextHolder.clearContext();
     }
 
     @AfterEach
-    void 보안컨텍스트_정리() {
+    void tearDownSecurityContext() {
         SecurityContextHolder.clearContext();
     }
 
