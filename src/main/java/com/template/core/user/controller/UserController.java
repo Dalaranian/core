@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.template.core.common.response.ApiResponse;
 import com.template.core.user.service.UserService;
 import com.template.core.user.dto.UserJoinRequest;
 import com.template.core.user.dto.UserJoinResponse;
@@ -25,7 +26,7 @@ public class UserController {
 
     /** 회원 가입. */
     @PostMapping
-    public UserJoinResponse join(@RequestBody UserJoinRequest request) {
-        return userService.join(request);
+    public ApiResponse<UserJoinResponse> join(@RequestBody UserJoinRequest request) {
+        return ApiResponse.success(userService.join(request));
     }
 }
