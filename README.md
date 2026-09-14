@@ -122,5 +122,8 @@ JWT secret 등 비밀 값은 환경 변수로 주입합니다(`JWT_SECRET` 등).
 
 ## 관련 문서
 
-- `HELP.md` — 코드 생성 단계에서 만들어진 Gradle 기본 도움말
+문서는 `docs/` 폴더에서 관리한다.
+
+- `docs/HELP.md` — 코드 생성 단계에서 만들어진 Gradle 기본 도움말
+- `docs/ADDITIONAL_FEATURES.md` — 기획 대비 미구현 기능 분석 (TODO)
 - `compose.yaml` — Docker Compose (현재 서비스 정의 없음)
