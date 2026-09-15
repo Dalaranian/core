@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.template.core.common.response.ApiResponse;
 import com.template.core.user.service.UserService;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
@@ -25,7 +26,7 @@ public class AuthController {
 
     /** 로그인 후 JWT를 발급한다. */
     @PostMapping("/login")
-    public LoginResponse login(@RequestBody LoginRequest request) {
-        return userService.login(request);
+    public ApiResponse<LoginResponse> login(@RequestBody LoginRequest request) {
+        return ApiResponse.success(userService.login(request));
     }
 }
