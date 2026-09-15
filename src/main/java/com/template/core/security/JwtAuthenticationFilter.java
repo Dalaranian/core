@@ -41,25 +41,18 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         String token = resolveToken(request);
         if (token != null) {
             String subject = jwtService.validateAndGetSubject(token);
-            if (subject != null && isActivatedUser(subject)) {
-                var authentication = new UsernamePasswordAuthenticationToken(
-                        subject, null, List.of(new SimpleGrantedAuthority("ROLE_USER")));
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+            if (subject != null) {
+                // 토큰 유효성과 무관하게 매 요청마다 DB의 최신 상태/역할을 반영한다
+                userRepository.findByLoginId(subject)
+                        .filter(user -> user.getStatus() == UserStatus.ACTIVE)
+                        .ifPresent(user -> {
+                            var authentication = new UsernamePasswordAuthenticationToken(
+                                    subject, null, List.of(new SimpleGrantedAuthority(user.getRole().getAuthority())));
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        });
             }
         }
         filterChain.doFilter(request, response);
-    }
-
-    /**
-     * 로그인 ID로 사용자를 조회해 활성화 회원인지 확인한다.
-     *
-     * <p>사용자가 없거나 탈퇴(WITHDRAWN) 상태이면 false로,
-     * 안전한 쪽인 기본 거부(default deny)로 처리한다.</p>
-     */
-    private boolean isActivatedUser(String loginId) {
-        return userRepository.findByLoginId(loginId)
-                .map(user -> user.getStatus() == UserStatus.ACTIVE)
-                .orElse(false);
     }
 
     /** Authorization 헤더에서 "Bearer " 접두사를 제거한 토큰을 추출한다. */
