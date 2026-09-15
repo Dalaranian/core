@@ -57,6 +57,16 @@ public class UserEntity {
     @Column(name = "status", nullable = false, columnDefinition = "integer default 10")
     private UserStatus status = UserStatus.ACTIVE;
 
+    /**
+     * 사용자 역할. 신규 가입 시 일반 사용자(ROLE_USER)가 기본값.
+     * DB에는 코드값(10/20)으로 저장되며, columnDefinition의 default 10은
+     * role 컬럼 추가 이전의 기존 데이터를 일반 사용자로 채우기 위한 것이다.
+     */
+    @Builder.Default
+    @Convert(converter = UserRole.CodeConverter.class)
+    @Column(name = "role", nullable = false, columnDefinition = "integer default 10")
+    private UserRole role = UserRole.ROLE_USER;
+
     /** 탈퇴 신청 시각. 탈퇴 배치가 익일 자정에 이 시각 기준으로 데이터를 삭제한다. */
     @Column(name = "withdrawn_at")
     private LocalDateTime withdrawnAt;

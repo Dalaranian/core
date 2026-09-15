@@ -18,6 +18,7 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.template.core.user.entity.UserEntity;
+import com.template.core.user.entity.UserRole;
 import com.template.core.user.repository.UserRepository;
 import com.template.core.user.entity.UserStatus;
 
@@ -85,6 +86,30 @@ class JwtAuthenticationFilterTest {
         verify(filterChain).doFilter(
                 org.mockito.ArgumentMatchers.any(HttpServletRequest.class),
                 org.mockito.ArgumentMatchers.any(HttpServletResponse.class));
+    }
+
+    @Test
+    @DisplayName("관리자 회원의 유효한 토큰이면 ROLE_ADMIN 권한으로 인증된다")
+    void doFilter_WithValidTokenOfAdminUser_SetsAdminAuthority() throws Exception {
+        // given: 유효한 토큰과 관리자(ROLE_ADMIN) 활성화 회원을 준비한다
+        UserEntity adminUser = UserEntity.builder()
+                .id("admin")
+                .pw("pw")
+                .userName("관리자")
+                .status(UserStatus.ACTIVE)
+                .role(UserRole.ROLE_ADMIN)
+                .build();
+        when(jwtService.validateAndGetSubject("admin-token")).thenReturn("admin");
+        when(userRepository.findByLoginId("admin")).thenReturn(java.util.Optional.of(adminUser));
+
+        // when: Bearer 토큰을 담은 요청으로 필터를 실행한다
+        filter.doFilter(bearerRequest("admin-token"), new MockHttpServletResponse(), filterChain);
+
+        // then: SecurityContext에 ROLE_ADMIN 권한 인증이 설정된다
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(authentication).isNotNull();
+        assertThat(authentication.getAuthorities())
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
     }
 
     @Test

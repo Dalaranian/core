@@ -91,4 +91,23 @@ class UserEntityTest {
         // when & then: 알 수 없는 코드는 안전하게 null 처리된다
         assertThat(UserStatus.fromCode(999)).isNull();
     }
+
+    @Test
+    @DisplayName("신규 사용자는 기본 역할 ROLE_USER(코드 10)로 저장된다")
+    void save_WithNewUser_PersistsUserRoleAsCode10() {
+        // given: 역할 미지정(기본 ROLE_USER) 사용자를 준비한다
+        UserEntity user = UserEntity.builder()
+                .id("role-user")
+                .pw("plain-pw")
+                .userName("홍길동")
+                .build();
+
+        // when: 영속화하고 DB에 반영한다
+        em.persist(user);
+        em.flush();
+
+        // then: 저장된 엔티티의 역할이 ROLE_USER(코드 10)인지 확인한다
+        assertThat(user.getRole()).isEqualTo(UserRole.ROLE_USER);
+        assertThat(user.getRole().getCode()).isEqualTo(10);
+    }
 }
