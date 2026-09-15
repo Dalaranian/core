@@ -7,7 +7,6 @@
 - 백엔드: Java + SpringBoot, Gradle(`build.gradle`, `settings.gradle`) 기반 빌드
 - 데이터 접근: JPA (Java Persistence API)
 - DB: SQLite (`test.db` 포함)
-- 클라이언트/컴포즈: `compose.yaml`
 
 ## 주의 (스캔 없이 전제만으로 작업할 때)
 
