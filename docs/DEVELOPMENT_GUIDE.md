@@ -50,7 +50,7 @@ public class UserController {
 
 1. **컨트롤러는 얇게 유지한다.** 요청을 서비스에 전달하고 결과를 `ApiResponse`로 감싸는 것 외의 로직을 넣지 않는다. 검증·상태 전환·예외 판단은 전부 서비스가 담당한다.
 2. **응답은 `ApiResponse<T>` 봉투로 감싼다.** `ApiResponse.success(data)`를 사용하면 traceId/timestamp가 자동으로 채워진다.
-   - 예외: 인증 엔드포인트처럼 응답 본문을 클라이언트가 그대로 소비하는 경우 (`AuthController.login`) 봉투 없이 DTO를 반환할 수 있다. 단, 이유를 주석으로 남긴다.
+   - 모든 컨트롤러에 적용된다. 인증 엔드포인트(`AuthController.login`)도 예외 없이 봉투를 사용한다.
 3. **본문 없는 성공은 `ApiResponse<Void>`**로 `ApiResponse.success(null)`을 반환한다 (예: 회원 탈퇴).
 4. **인증 주체는 `Authentication` 파라미터로 받는다.** 서비스에는 `authentication.getName()`(로그인 ID)만 넘긴다. `UserPrincipal` 등 내부 구현체를 컨트롤러에서 다루지 않는다.
 5. **접근자 없이 생성자 주입**을 쓴다. `@RequiredArgsConstructor` + `private final` 필드.
