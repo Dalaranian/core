@@ -31,7 +31,6 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-gson:0.12.6'
 
 	compileOnly 'org.projectlombok:lombok'
-	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	runtimeOnly 'org.xerial:sqlite-jdbc'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
