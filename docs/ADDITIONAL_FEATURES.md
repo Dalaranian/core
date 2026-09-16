@@ -12,27 +12,29 @@ README(기획 문서)와 현재 구현(`src/`)을 비교해 정리한 개발 현
 | 회원 탈퇴 | ✅ 완료 | 유예 배치(`WithdrawalCleanupScheduler`) + 탈퇴 회원 토큰 차단 포함 |
 | 인증 사용자 식별 | ✅ 설계 확정 | `Authentication` 기반 (의도적 설계 — §3 참고) |
 | Actuator | ✅ 완료 | health/info 노출 + `permitAll` |
-| Bean Validation | ❌ 미완료 | **최우선 작업** (P0) |
+| Bean Validation | ✅ 완료 | user/code 전체 요청 DTO + `@Valid` + 400 `VALIDATION_ERROR` 핸들러 (§2-1 참고) |
 | STG/PROD 프로파일 | ❌ 미완료 | 환경별 설정 파일 필요 (P1) |
 | OAuth2 Client | ⚠️ 기획 확인 필요 | 의존성만 존재, 실제 구현 없음 |
 | HELP.md / compose.yaml | ✅ 정리 완료 | 모두 제거됨, docker-compose 의존성도 제거 |
 
 ## 2. 반드시 추가 구현할 기능
 
-### 2-1. Bean Validation — P0
+### 2-1. Bean Validation — ✅ 완료
 
-현재 요청 DTO(`UserJoinRequest`, `LoginRequest`, `WithdrawRequest`)에 검증이 전혀 없어
-빈 로그인 ID/비밀번호가 그대로 서비스 레이어까지 도달한다(신뢰 경계 검증 누락).
+user 도메인(`UserJoinRequest`, `LoginRequest`, `WithdrawRequest`)과 code 도메인
+(`CodeGroupCreateRequest`, `CodeCreateRequest`, `CodeUpdateRequest`) 전체에 적용 완료.
 
-작업 범위:
+구현 내역:
 
-1. `build.gradle`에 `spring-boot-starter-validation` 추가
-2. Request DTO에 검증 어노테이션 적용 (`@NotBlank`, 크기 제한 등)
-   - 예: `UserJoinRequest.id` → `@NotBlank`, `pw` → `@NotBlank` + 최소 길이 정책
-3. 컨트롤러 파라미터에 `@Valid` 적용 (`UserController.join`, `AuthController.login`, `UserController.withdraw`)
-4. `GlobalExceptionHandler`에 `MethodArgumentNotValidException` 핸들러 추가 → 400 응답
-5. 검증 실패 응답 형식 정의 — 기존 `ApiResponse` 봉투(`success`/`data`/`error`/`traceId`/`timestamp`)와 충돌하지 않도록
-   `ErrorResponse`를 확장하거나 필드별 오류를 담는 구조로 통일:
+1. `build.gradle`에 `spring-boot-starter-validation` 추가 ✅
+2. 요청 DTO 검증 어노테이션 적용 — `@Size(max=...)`는 엔티티 컬럼 길이와 일치 ✅
+   - `UserJoinRequest`: `@NotBlank @Size` + 클래스 레벨 `@StrongPassword`
+     (8~72자, 3종 이상 조합, 연속/반복 문자 차단, 취약 단어 블랙리스트, ID 포함 금지 — `user/validation/StrongPasswordValidator`)
+   - `LoginRequest`/`WithdrawRequest`: `@NotBlank`만 (포맷 유출 방지, 정책은 가입 시에만)
+   - `CodeUpdateRequest`: 부분 수정이므로 null 통과 규칙(`@Size`/`@Min`)만 적용
+3. 컨트롤러 `@Valid` 적용: `UserController.join/withdraw`, `AuthController.login`, `CodeAdminController.createGroup/createCode/updateCode` ✅
+4. `GlobalExceptionHandler`에 `MethodArgumentNotValidException` 핸들러 → 400 ✅
+5. 응답 형식 — `ErrorResponse`에 `fieldErrors`(필드명 → 메시지) 추가, `@JsonInclude(NON_NULL)`로 기존 봉투 유지: ✅
 
 ```json
 {
@@ -43,7 +45,7 @@ README(기획 문서)와 현재 구현(`src/`)을 비교해 정리한 개발 현
     "message": "요청 값이 올바르지 않습니다.",
     "fieldErrors": {
       "id": "아이디는 필수입니다.",
-      "pw": "비밀번호는 8자 이상이어야 합니다."
+      "pw": "비밀번호는 8~72자여야 합니다."
     }
   },
   "traceId": "...",
@@ -51,6 +53,17 @@ README(기획 문서)와 현재 구현(`src/`)을 비교해 정리한 개발 현
 }
 ```
 
+6. 메시지 정책: 어노테이션에 한국어 인라인 사용 — `messages.properties` 분리는 보류(규칙이 늘어날 때 도입) ✅
+
+작업 범위(참고용 원본):
+
+1. `build.gradle`에 `spring-boot-starter-validation` 추가
+2. Request DTO에 검증 어노테이션 적용 (`@NotBlank`, 크기 제한 등)
+   - 예: `UserJoinRequest.id` → `@NotBlank`, `pw` → `@NotBlank` + 최소 길이 정책
+3. 컨트롤러 파라미터에 `@Valid` 적용 (`UserController.join`, `AuthController.login`, `UserController.withdraw`)
+4. `GlobalExceptionHandler`에 `MethodArgumentNotValidException` 핸들러 추가 → 400 응답
+5. 검증 실패 응답 형식 정의 — 기존 `ApiResponse` 봉투(`success`/`data`/`error`/`traceId`/`timestamp`)와 충돌하지 않도록
+   `ErrorResponse`를 확장하거나 필드별 오류를 담는 구조로 통일
 6. 필드별 오류 메시지 정책 결정 (메시지를 어노테이션에 인라인할지, `messages.properties`로 분리할지)
 
 ### 2-2. STG/PROD 프로파일 — P1
@@ -121,7 +134,7 @@ STG/PROD 프로파일 작성 시(§2-2) 이 패턴을 유지하고 기본값을 
 
 | 순위 | 작업 | 비고 |
 | --- | --- | --- |
-| P0 | Bean Validation 적용 + `GlobalExceptionHandler`에 validation 예외 처리 (§2-1) | 입력값 신뢰 경계 검증 |
+| ✅ | Bean Validation 적용 + `GlobalExceptionHandler`에 validation 예외 처리 (§2-1) | 입력값 신뢰 경계 검증 |
 | P1 | STG/PROD 프로파일 + 민감정보 외부화 (§2-2) | 배포에 필요한 최소 운영 설정 |
 | P2 | OAuth2 방향 결정 → 구현 또는 의존성·문서 제거 (§3-1) | 기획 확인 선행 |
 | P3 | Actuator 세부 개선, `UserPrincipal` 권한 확장 등 선택적 리팩터링 (§3-2, §4-1) | 필요 시점에 |
