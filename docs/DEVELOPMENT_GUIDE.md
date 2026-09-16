@@ -120,7 +120,7 @@ public record UserJoinRequest(String id, String pw, String userName) {
 
 ```java
 public static UserJoinResponse from(UserEntity user) {
-    return new UserJoinResponse(user.getSeq(), user.getId(), user.getUserName());
+    return new UserJoinResponse(user.getId(), user.getUserName());
 }
 
 ## 5. 엔티티 & 리포지토리 작성 규칙
