@@ -1,5 +1,6 @@
 package com.template.core.user.code;
 
+import com.template.core.common.code.CodeEnum;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import lombok.Getter;
@@ -10,26 +11,33 @@ import lombok.Getter;
  * <p>DB에는 enum 이름/순번이 아닌 코드값(10/20)으로 저장된다.
  * 변환은 {@link CodeConverter}가 담당한다.</p>
  *
- * <p>Spring Security 권한 문자열이 필요하면 {@link #getAuthority()}를 사용한다.
- * 새 역할 추가 시 코드값만 이어서 부여하면 된다.</p>
+ * <p>{@link CodeEnum}을 구현해 기동 시 코드 테이블(USER_ROLE 그룹)로
+ * 시드 싱크된다. Spring Security 권한 문자열이 필요하면
+ * {@link #getAuthority()}를 사용한다.</p>
  */
 @Getter
-public enum UserRole {
+public enum UserRole implements CodeEnum {
 
     /** 일반 사용자 */
-    ROLE_USER(10),
+    ROLE_USER(10, "일반 사용자"),
 
     /** 관리자 */
-    ROLE_ADMIN(20);
+    ROLE_ADMIN(20, "관리자");
 
     /**
      * -- GETTER --
      * DB 저장용 코드값
      */
     private final int code;
+    /**
+     * -- GETTER --
+     * 역할 설명(코드 테이블 description과 싱크됨)
+     */
+    private final String description;
 
-    UserRole(int code) {
+    UserRole(int code, String description) {
         this.code = code;
+        this.description = description;
     }
 
     /** Spring Security 권한 문자열(= enum 이름) */
