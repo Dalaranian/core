@@ -13,6 +13,7 @@ import com.template.core.user.dto.UserJoinRequest;
 import com.template.core.user.dto.UserJoinResponse;
 import com.template.core.user.dto.WithdrawRequest;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -29,7 +30,7 @@ public class UserController {
 
     /** 회원 가입. */
     @PostMapping
-    public ApiResponse<UserJoinResponse> join(@RequestBody UserJoinRequest request) {
+    public ApiResponse<UserJoinResponse> join(@Valid @RequestBody UserJoinRequest request) {
         return ApiResponse.success(userService.join(request));
     }
 
@@ -39,7 +40,7 @@ public class UserController {
      */
     @DeleteMapping("/me")
     public ApiResponse<Void> withdraw(Authentication authentication,
-            @RequestBody WithdrawRequest request) {
+            @Valid @RequestBody WithdrawRequest request) {
         userService.withdraw(authentication.getName(), request);
         return ApiResponse.success(null);
     }
