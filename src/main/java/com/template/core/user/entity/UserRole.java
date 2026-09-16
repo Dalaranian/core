@@ -2,6 +2,7 @@ package com.template.core.user.entity;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
+import lombok.Getter;
 
 /**
  * 사용자 역할.
@@ -12,6 +13,7 @@ import jakarta.persistence.Converter;
  * <p>Spring Security 권한 문자열이 필요하면 {@link #getAuthority()}를 사용한다.
  * 새 역할 추가 시 코드값만 이어서 부여하면 된다.</p>
  */
+@Getter
 public enum UserRole {
 
     /** 일반 사용자 */
@@ -20,15 +22,14 @@ public enum UserRole {
     /** 관리자 */
     ROLE_ADMIN(20);
 
+    /**
+     * -- GETTER --
+     * DB 저장용 코드값
+     */
     private final int code;
 
     UserRole(int code) {
         this.code = code;
-    }
-
-    /** DB 저장용 코드값 */
-    public int getCode() {
-        return code;
     }
 
     /** Spring Security 권한 문자열(= enum 이름) */
