@@ -17,7 +17,8 @@ com.template.core
 └── user             # 도메인 폴더 예시
     ├── controller   # AuthController, UserController
     ├── dto          # 요청/응답 record DTO
-    ├── entity       # UserEntity, UserStatus
+    ├── entity       # UserEntity
+    ├── code         # UserRole, UserStatus 등 코드성 enum
     ├── repository   # UserRepository
     ├── principal    # UserPrincipal
     └── service      # UserService, CustomUserDetailsService

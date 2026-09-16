@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.template.core.user.repository.UserRepository;
-import com.template.core.user.entity.UserStatus;
+import com.template.core.user.code.UserStatus;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

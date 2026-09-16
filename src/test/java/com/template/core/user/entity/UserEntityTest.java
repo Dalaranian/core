@@ -1,5 +1,7 @@
 package com.template.core.user.entity;
 
+import com.template.core.user.code.UserRole;
+import com.template.core.user.code.UserStatus;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;

@@ -6,7 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.template.core.security.JwtService;
 import com.template.core.user.entity.UserEntity;
-import com.template.core.user.entity.UserStatus;
+import com.template.core.user.code.UserStatus;
 import com.template.core.user.repository.UserRepository;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;

@@ -8,7 +8,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import com.template.core.user.entity.UserEntity;
-import com.template.core.user.entity.UserRole;
+import com.template.core.user.code.UserRole;
 
 import lombok.RequiredArgsConstructor;
 
