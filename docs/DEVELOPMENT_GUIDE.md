@@ -10,6 +10,7 @@
 ```
 com.template.core
 ├── common
+│   ├── code         # 공통 코드 (CodeEnum, CodeSyncRunner + entity/repository/service/controller/dto)
 │   ├── error        # ErrorResponse, GlobalExceptionHandler
 │   └── response     # ApiResponse (공통 응답 봉투)
 ├── logging          # TraceIdFilter
@@ -146,6 +147,120 @@ public class UserEntity {
 - Lombok 조합: `@Getter` + `@NoArgsConstructor(PROTECTED)` + `@AllArgsConstructor(PRIVATE)` + `@Builder`.
 - 상태(enum)는 코드값 컨버터(`@Convert`)로 저장하고, 컬럼에 DB 기본값이 필요하면 `columnDefinition`을 명시한다.
 - 비즈니스 상태 전환 메서드를 엔티티 안에 둔다 (`withdraw()`).
+
+### 공통 코드 (common/code)
+
+코드값을 DB에서 동적으로 관리하되, 비즈니스 로직에 필요한 코드는 enum의 타입 세이프함을 유지하는 하이브리드 구조다.
+
+#### 패키지 구조
+
+```
+com.template.core.common.code
+├── CodeEnum.java          # 코드성 enum의 공통 계약(인터페이스)
+├── CodeSyncRunner.java    # 기동 시 enum → DB 싱크(ApplicationRunner)
+├── entity/                # CodeEntity(복합PK: group_code+code), CodeGroupEntity, CodeId
+├── repository/            # CodeRepository, CodeGroupRepository
+├── service/               # CodeService (캐시 + 트리 조립 + 관리 동작)
+├── controller/            # CodeAdminController (/admin/codes, ROLE_ADMIN)
+└── dto/                   # 생성/수정 요청, 트리 응답 record
+```
+
+#### 테이블 구조
+
+```
+code_groups (그룹)                    codes (값, 복합 PK)
+├── group_code   PK                   ├── group_code + code  복합 PK (CodeId)
+├── group_name                        ├── parent_code        ← 같은 그룹 내 상위 코드(계층의 핵심)
+├── description                       ├── name               (코드명, 예: ACTIVE)
+├── use_yn                            ├── description        (설명, 예: 활성화회원)
+└── seed_yn                           ├── sort_order
+                                      ├── use_yn             (false = 비활성, soft delete)
+                                      └── seed_yn            (true = enum에서 유래)
+```
+
+#### 계층(2/3레벨) 표현 방식
+
+`codes.parent_code` 자기참조로 N계층을 표현한다. `parent_code`가 null이면 그룹 1레벨이고, 같은 **그룹 내** 상위 코드만 가리킬 수 있다(타 그룹 참조는 생성 시 거부됨).
+
+```
+group: MENU
+├── 100  대분류          (parent = null, 1레벨)
+│   ├── 110  중분류      (parent = 100, 2레벨)
+│   │   └── 111  소분류  (parent = 110, 3레벨)
+│   └── 120  숨김분류    (use_yn = false)
+└── 200  대분류2         (parent = null)
+```
+
+#### enum ↔ DB 싱크 규칙 (단방향: enum → DB)
+
+1. 비즈니스 동작에 필요한 코드는 enum(`CodeEnum` 구현)으로 정의한다. 기존 `UserStatus`, `UserRole`처럼 코드 컨버터(`@Convert`)로 저장하는 방식은 그대로 유지된다.
+2. 애플리케이션 기동 시 `CodeSyncRunner`가 enum 값을 `code_groups`/`codes` 테이블로 upsert한다. 이때 생성/갱신되는 행은 `seed_yn = true`다.
+3. **seed 코드는 관리 API로 수정·비활성화할 수 없다.** enum이 원본이므로 재배포 시 싱크가 원본 값을 덮어쓴다(이름/설명/정렬 불일치 감지 시 자동 갱신).
+4. DB에 같은 코드값의 비시드 코드(관리 API로 만든 동적 코드)가 이미 있으면 덮어쓰지 않고 경고 로그만 남긴다.
+5. **동적 코드(enum에 없는 코드)는 비즈니스 분기(`==` 비교)에 사용할 수 없다.** 이름·설명 조회, 트리 표시 등 표시 목적으로만 사용한다.
+6. enum 안에서 2레벨 계층을 시딩하려면 `getParentCode()`를 오버라이드하고, 상위 코드 상수를 목록에서 먼저 선언한다(선언 순서가 어긋나도 러너가 반복 시도로 해소).
+
+#### 새 코드 enum 추가 절차
+
+```java
+// 1. enum 정의 (코드 컨버터가 있다면 기존 패턴 그대로 유지)
+@Getter
+public enum MenuType implements CodeEnum {
+    BASIC(10, "기본"),
+    PREMIUM(20, "프리미엄");
+
+    private final int code;
+    private final String description;
+    ...
+}
+
+// 2. CodeSyncRunner.SEED_CODES에 상수 등록 (한 줄)
+private static final List<CodeEnum> SEED_CODES = List.of(
+        UserStatus.ACTIVE, UserStatus.WITHDRAWN,
+        UserRole.ROLE_USER, UserRole.ROLE_ADMIN,
+        MenuType.BASIC, MenuType.PREMIUM);
+```
+
+- 그룹 식별자는 enum 클래스명에서 자동 파생된다(`MenuType` → `MENU_TYPE`).
+- 그룹 표시 이름을 한글로 하려면 `getGroupName()`을 오버라이드한다(기본값은 그룹 식별자).
+
+#### 조회 API (비즈니스 코드에서 사용)
+
+`CodeService`를 주입받아 사용한다. 조회는 메모리 캐시로 처리되므로 코드 테이블을 직접 repository로 조회하지 않는다.
+
+```java
+private final CodeService codeService;
+
+// 단건 활성 코드 조회
+Optional<CodeEntity> code = codeService.getCode("USER_STATUS", "10");
+
+// 직속 자식 조회 (parentCode가 null이면 그룹 1레벨)
+List<CodeEntity> children = codeService.getChildren("MENU", "100");
+
+// 활성 트리 조회 (2/3레벨이 children에 재귀 중첩)
+List<CodeTreeResponse> tree = codeService.getTree("MENU");
+```
+
+#### 관리 API (/admin/codes — ROLE_ADMIN)
+
+| 메서드 | 경로 | 설명 |
+|---|---|---|
+| GET | `/admin/codes` | 전체 그룹 + 각 그룹의 코드 트리(비활성 포함) |
+| POST | `/admin/codes/groups` | 새 그룹 생성 (`{groupCode, groupName, description}`) |
+| POST | `/admin/codes/{groupCode}/codes` | 코드 생성 (`{code, parentCode?, name, description?, sortOrder?}`) — `parentCode` 지정 시 2레벨 이상 |
+| PATCH | `/admin/codes/{groupCode}/{code}` | 이름/설명/정렬/사용여부 수정 (null 필드는 변경 안 함, seed 코드는 거부) |
+| DELETE | `/admin/codes/{groupCode}/{code}` | 비활성화(soft delete, 물리 삭제 없음) — seed 코드·활성 하위 코드 보유 시 거부 |
+
+- 검증 실패는 `IllegalArgumentException`(400)/`IllegalStateException`(409)로 처리되며 `GlobalExceptionHandler`가 공통 응답으로 변환한다.
+- 코드 변경 시 `CodeService`가 캐시를 무효화하므로 다음 조회는 변경된 값이 반영된다.
+
+#### 주의사항
+
+- `CodeService` 캐시는 코드 테이블 전체를 메모리에 적재한다(`ponytail:` 수만 건 이상으로 커지면 그룹 단위 지연 로딩으로 교체).
+- **비즈니스 코드 분기는 반드시 enum으로 한다**: `user.getStatus() == UserStatus.WITHDRAWN`. DB 코드값만으로 문자열 비교 분기를 만들지 않는다.
+- 새 코드 enum 추가 시 반드시 `CodeSyncRunner.SEED_CODES`에 등록한다. 누락하면 DB로 싱크되지 않는다.
+- 참조 테스트: `src/test/java/com/template/core/common/code/CodeSyncRunnerTest.java`, `CodeServiceTest.java`
+
 
 ### 리포지토리
 
