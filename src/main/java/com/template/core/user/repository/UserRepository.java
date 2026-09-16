@@ -35,7 +35,7 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
      * @return 삭제된 건수
      */
     @Modifying
-    @Query("delete from UserEntity u where u.status = com.template.core.user.entity.UserStatus.WITHDRAWN"
+    @Query("delete from UserEntity u where u.status = com.template.core.user.code.UserStatus.WITHDRAWN"
             + " and u.withdrawnAt < :cutoff")
     int deleteWithdrawnBefore(@Param("cutoff") LocalDateTime cutoff);
 }

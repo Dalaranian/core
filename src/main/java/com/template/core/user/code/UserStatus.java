@@ -1,5 +1,6 @@
-package com.template.core.user.entity;
+package com.template.core.user.code;
 
+import com.template.core.common.code.CodeEnum;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 import lombok.Getter;
@@ -9,9 +10,12 @@ import lombok.Getter;
  *
  * <p>DB에는 enum 이름/순번이 아닌 코드값(10/20)으로 저장된다.
  * 변환은 {@link CodeConverter}가 담당한다.</p>
+ *
+ * <p>{@link CodeEnum}을 구현해 기동 시 코드 테이블(USER_STATUS 그룹)로
+ * 시드 싱크된다.</p>
  */
 @Getter
-public enum UserStatus {
+public enum UserStatus implements CodeEnum {
 
     /** 활성화 회원 */
     ACTIVE(10, "활성화회원"),

@@ -1,5 +1,7 @@
 package com.template.core.user.entity;
 
+import com.template.core.user.code.UserRole;
+import com.template.core.user.code.UserStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;

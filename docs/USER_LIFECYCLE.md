@@ -83,7 +83,7 @@ SecurityFilterChain 규칙 판단
 ## 관련 코드
 
 - `user/entity/UserEntity.java` — `withdraw()`, `UserStatus` 컨버터, `role` 필드
-- `user/entity/UserRole.java` — 역할 enum (`ROLE_USER`/`ROLE_ADMIN` + 코드 컨버터)
+- `user/code/UserRole.java` — 역할 enum (`ROLE_USER`/`ROLE_ADMIN` + 코드 컨버터)
 - `user/service/UserService.java` — 탈퇴·로그인 차단 로직
 - `security/JwtAuthenticationFilter.java` — 토큰 검증 및 역할 기반 권한 부여
 - `security/SecurityConfig.java` — `/admin/**` 접근 제어 규칙
