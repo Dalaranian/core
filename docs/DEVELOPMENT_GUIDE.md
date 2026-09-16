@@ -42,7 +42,7 @@ public class UserController {
 
     /** 회원 가입. */
     @PostMapping
-    public ApiResponse<UserJoinResponse> join(@RequestBody UserJoinRequest request) {
+    public ApiResponse<UserJoinResponse> join(@Valid @RequestBody UserJoinRequest request) {
         return ApiResponse.success(userService.join(request));
     }
 }
@@ -259,7 +259,7 @@ List<CodeTreeResponse> tree = codeService.getTree("MENU");
 | PATCH | `/admin/codes/{groupCode}/{code}` | 이름/설명/정렬/사용여부 수정 (null 필드는 변경 안 함, seed 코드는 거부) |
 | DELETE | `/admin/codes/{groupCode}/{code}` | 비활성화(soft delete, 물리 삭제 없음) — seed 코드·활성 하위 코드 보유 시 거부 |
 
-- 검증 실패는 `IllegalArgumentException`(400)/`IllegalStateException`(409)로 처리되며 `GlobalExceptionHandler`가 공통 응답으로 변환한다.
+- 검증 실패는 `IllegalArgumentException`(400)/`IllegalStateException`(409)로 처리되며 `GlobalExceptionHandler`가 공통 응답으로 변환한다. 요청 본문 형식 검증은 컨트롤러의 `@Valid` + Bean Validation이 담당하며, 실패 시 400 `VALIDATION_ERROR`와 필드별 오류(`fieldErrors`)로 응답한다.
 - 코드 변경 시 `CodeService`가 캐시를 무효화하므로 다음 조회는 변경된 값이 반영된다.
 
 #### 주의사항
