@@ -2,6 +2,8 @@ package com.template.core.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -25,6 +27,10 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final Environment environment;
+
+    /** dev 프로파일에서만 Swagger 리소스를 인증 없이 허용하기 위한 경로. */
+    private static final String[] SWAGGER_PATHS = {"/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**"};
 
     /**
      * HTTP 요청에 적용할 보안 필터 체인을 구성한다.
@@ -41,11 +47,17 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/login", "/api/users", "/actuator/health", "/actuator/info").permitAll()
-                        // /admin 하위는 관리자(ROLE_ADMIN) 권한 필요
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .anyRequest().authenticated())
+                .authorizeHttpRequests(auth -> {
+                    var auth0 = auth.requestMatchers("/api/auth/login", "/api/users", "/actuator/health", "/actuator/info").permitAll();
+                    // dev 프로파일에서만 Swagger UI/API 문서를 인증 없이 접근 허용
+                    if (environment.acceptsProfiles(Profiles.of("dev"))) {
+                        auth0.requestMatchers(SWAGGER_PATHS).permitAll();
+                    }
+                    auth0
+                            // /admin 하위는 관리자(ROLE_ADMIN) 권한 필요
+                            .requestMatchers("/admin/**").hasRole("ADMIN")
+                            .anyRequest().authenticated();
+                })
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
