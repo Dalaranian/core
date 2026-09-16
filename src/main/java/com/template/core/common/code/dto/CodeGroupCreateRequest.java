@@ -1,5 +1,8 @@
 package com.template.core.common.code.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 /**
  * 코드 그룹 생성 요청.
  *
@@ -7,5 +10,8 @@ package com.template.core.common.code.dto;
  * @param groupName   그룹 표시 이름
  * @param description 그룹 설명
  */
-public record CodeGroupCreateRequest(String groupCode, String groupName, String description) {
+public record CodeGroupCreateRequest(
+		@NotBlank(message = "그룹 코드는 필수입니다.") @Size(max = 30, message = "그룹 코드는 30자 이하여야 합니다.") String groupCode,
+		@NotBlank(message = "그룹 이름은 필수입니다.") @Size(max = 100, message = "그룹 이름은 100자 이하여야 합니다.") String groupName,
+		@Size(max = 200, message = "설명은 200자 이하여야 합니다.") String description) {
 }

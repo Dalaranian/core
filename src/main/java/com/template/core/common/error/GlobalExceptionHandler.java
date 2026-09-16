@@ -4,10 +4,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.template.core.common.response.ApiResponse;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * 서비스/컨트롤러 레이어에서 던진 예외를 공통 응답 봉투(ApiResponse)로 변환하는 핸들러.
@@ -32,6 +36,15 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "INVALID_ARGUMENT", e.getMessage());
     }
 
+    /** Bean Validation 실패(@Valid) → 400. 필드별 오류 메시지를 함께 담는다. */
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
+        Map<String, String> fieldErrors = new LinkedHashMap<>();
+        e.getBindingResult().getFieldErrors()
+                .forEach(fe -> fieldErrors.putIfAbsent(fe.getField(), fe.getDefaultMessage()));
+        return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "요청 값이 올바르지 않습니다.", fieldErrors);
+    }
+
     /** 폴백: 예상하지 못한 예외 → 500. 내부 정보 노출을 막기 위해 범용 메시지로 응답한다. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {
@@ -41,7 +54,13 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ApiResponse<Void>> build(HttpStatus status, String code, String message) {
+        return build(status, code, message, null);
+    }
+
+    private ResponseEntity<ApiResponse<Void>> build(HttpStatus status, String code, String message,
+            Map<String, String> fieldErrors) {
         log.warn("클라이언트 오류 응답: code={}, message={}", code, message);
-        return ResponseEntity.status(status).body(ApiResponse.error(ErrorResponse.of(code, message)));
+        return ResponseEntity.status(status)
+                .body(ApiResponse.error(ErrorResponse.ofValidation(code, message, fieldErrors)));
     }
 }

@@ -1,5 +1,9 @@
 package com.template.core.common.code.dto;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+
 /**
  * 코드 생성 요청.
  *
@@ -9,6 +13,10 @@ package com.template.core.common.code.dto;
  * @param description 코드 설명
  * @param sortOrder   정렬 순서(미지정 시 0)
  */
-public record CodeCreateRequest(String code, String parentCode, String name,
-        String description, Integer sortOrder) {
+public record CodeCreateRequest(
+		@NotBlank(message = "코드값은 필수입니다.") @Size(max = 50, message = "코드값은 50자 이하여야 합니다.") String code,
+		@Size(max = 50, message = "상위 코드값은 50자 이하여야 합니다.") String parentCode,
+		@NotBlank(message = "코드명은 필수입니다.") @Size(max = 100, message = "코드명은 100자 이하여야 합니다.") String name,
+		@Size(max = 200, message = "설명은 200자 이하여야 합니다.") String description,
+		@Min(value = 0, message = "정렬 순서는 0 이상이어야 합니다.") Integer sortOrder) {
 }

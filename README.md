@@ -12,12 +12,14 @@ REST API 서버를 시작할 때마다 반복 작성하게 되는 공통 코드(
 - **회원 관리 골격**: 가입(`POST /api/users`), 로그인(`POST /api/auth/login`), 탈퇴(`DELETE /api/users/me`)
 - **회원 탈퇴 유예**: 탈퇴 시 즉시 삭제하지 않고 유예 기간 후 매일 자정 배치로 제거 (`WithdrawalCleanupScheduler`)
 - **공통 응답/에러**: `ApiResponse` 래퍼와 `GlobalExceptionHandler` 표준 에러 응답
+- **입력 검증**: Bean Validation 기반 요청 DTO 검증(`@Valid`) — 실패 시 400 + `VALIDATION_ERROR` + 필드별 오류 메시지, 비밀번호 보안 정책 검증기 포함 (`StrongPasswordValidator`)
 - **SQLite 영속화**: JPA 기반, 별도 DB 설치 없이 바로 동작
 
 ## 기술 스택
 
 - Java 21 / Spring Boot 4.0.7 / Gradle
 - 데이터베이스: SQLite (JPA / Hibernate community dialect)
+- 입력 검증: Bean Validation (Hibernate Validator, `spring-boot-starter-validation`)
 - 보안: Spring Security, JJWT 0.12.6
 - API 문서: springdoc-openapi 3 (Swagger UI)
 - 기타: Lombok, Actuator / 테스트: JUnit 5, AssertJ
@@ -41,6 +43,7 @@ src/main/java/com/template/core/
     ├── service/                      # UserService, CustomUserDetailsService
     ├── principal/UserPrincipal.java  # UserDetails 어댑터
     ├── dto/                          # 가입/로그인/탈퇴 요청·응답 DTO
+    ├── validation/                   # 비밀번호 보안 정책 검증기(@StrongPassword)
     ├── entity/                       # UserEntity, UserStatus
     ├── repository/UserRepository.java
     ├── WithdrawalCleanupScheduler.java  # 유예기간 경과 회원 삭제 배치(매일 자정)

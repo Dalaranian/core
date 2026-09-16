@@ -26,6 +26,7 @@ WithdrawalCleanupScheduler (매일 자정, user.withdrawal.delete-cron)
 ### 1. 가입 — ACTIVE
 
 - `UserService.join`에서 `UserEntity.builder()`로 생성, 기본 상태는 `ACTIVE`(코드 10).
+- 비밀번호는 가입 시점에 Bean Validation으로 검증된다(`@StrongPassword`): 8~72자, 대/소문자·숫자·특수문자 중 3종 이상, 연속/반복 문자 및 취약 단어·ID 포함 금지. 실패 시 400 `VALIDATION_ERROR`로 거부되고, 통과한 평문은 BCrypt로 인코딩되어 저장된다.
 - DB 컬럼 기본값 `default 10`은 status 컬럼 추가 이전 기존 데이터를 활성화 회원으로 채우기 위한 것.
 
 ### 2. 탈퇴 신청 — WITHDRAWN (논리 삭제)
@@ -82,6 +83,7 @@ SecurityFilterChain 규칙 판단
 
 ## 관련 코드
 
+- `user/validation/StrongPasswordValidator.java` — 비밀번호 보안 정책 검증기(가입 시에만 적용)
 - `user/entity/UserEntity.java` — `withdraw()`, `UserStatus` 컨버터, `role` 필드
 - `user/code/UserRole.java` — 역할 enum (`ROLE_USER`/`ROLE_ADMIN` + 코드 컨버터)
 - `user/service/UserService.java` — 탈퇴·로그인 차단 로직

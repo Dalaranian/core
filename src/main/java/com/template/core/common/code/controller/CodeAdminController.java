@@ -18,6 +18,7 @@ import com.template.core.common.code.dto.CodeUpdateRequest;
 import com.template.core.common.code.service.CodeService;
 import com.template.core.common.response.ApiResponse;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -41,7 +42,7 @@ public class CodeAdminController {
 
     /** 새 코드 그룹을 생성한다. */
     @PostMapping("/groups")
-    public ApiResponse<Void> createGroup(@RequestBody CodeGroupCreateRequest request) {
+    public ApiResponse<Void> createGroup(@Valid @RequestBody CodeGroupCreateRequest request) {
         codeService.createGroup(request);
         return ApiResponse.success(null);
     }
@@ -49,7 +50,7 @@ public class CodeAdminController {
     /** 그룹에 새 코드를 생성한다. parentCode 지정으로 2레벨/3레벨 등 N계층을 구성한다. */
     @PostMapping("/{groupCode}/codes")
     public ApiResponse<Void> createCode(@PathVariable String groupCode,
-            @RequestBody CodeCreateRequest request) {
+            @Valid @RequestBody CodeCreateRequest request) {
         codeService.createCode(groupCode, request);
         return ApiResponse.success(null);
     }
@@ -57,7 +58,7 @@ public class CodeAdminController {
     /** 코드의 표시 정보를 수정한다(시드 코드는 수정 불가). */
     @PatchMapping("/{groupCode}/{code}")
     public ApiResponse<Void> updateCode(@PathVariable String groupCode, @PathVariable String code,
-            @RequestBody CodeUpdateRequest request) {
+            @Valid @RequestBody CodeUpdateRequest request) {
         codeService.updateCode(groupCode, code, request);
         return ApiResponse.success(null);
     }

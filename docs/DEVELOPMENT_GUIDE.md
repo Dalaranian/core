@@ -42,7 +42,7 @@ public class UserController {
 
     /** 회원 가입. */
     @PostMapping
-    public ApiResponse<UserJoinResponse> join(@RequestBody UserJoinRequest request) {
+    public ApiResponse<UserJoinResponse> join(@Valid @RequestBody UserJoinRequest request) {
         return ApiResponse.success(userService.join(request));
     }
 }
@@ -50,7 +50,7 @@ public class UserController {
 
 ### 규칙
 
-1. **컨트롤러는 얇게 유지한다.** 요청을 서비스에 전달하고 결과를 `ApiResponse`로 감싸는 것 외의 로직을 넣지 않는다. 검증·상태 전환·예외 판단은 전부 서비스가 담당한다.
+1. **컨트롤러는 얇게 유지한다.** 요청을 서비스에 전달하고 결과를 `ApiResponse`로 감싸는 것 외의 로직을 넣지 않는다. 요청 DTO 형식 검증은 `@Valid` + Bean Validation이 담당하고, 상태 전환·비즈니스 예외 판단은 서비스가 담당한다.
 2. **응답은 `ApiResponse<T>` 봉투로 감싼다.** `ApiResponse.success(data)`를 사용하면 traceId/timestamp가 자동으로 채워진다.
    - 모든 컨트롤러에 적용된다. 인증 엔드포인트(`AuthController.login`)도 예외 없이 봉투를 사용한다.
 3. **본문 없는 성공은 `ApiResponse<Void>`**로 `ApiResponse.success(null)`을 반환한다 (예: 회원 탈퇴).
@@ -106,6 +106,11 @@ public class UserService {
 - **불변 record**로 작성한다. 클래스당 하나의 목적(요청 or 응답)만.
 - 파일명: `<기능>Request` / `<기능>Response` (예: `LoginRequest`, `WithdrawRequest`).
 - 각 필드에 `@param` Javadoc을 남긴다.
+- **요청 DTO에는 Bean Validation을 적용하는 것을 권장한다.** 신뢰 경계(외부 입력)이므로 컨트롤러의 `@Valid @RequestBody`에서 검증되고, 실패 시 `GlobalExceptionHandler`가 400 + `VALIDATION_ERROR` + 필드별 오류로 응답한다.
+  - 필수 문자열: `@NotBlank`, 크기 제한: `@Size(max = 엔티티 컬럼 길이)` — 컬럼 정의와 일치시킨다
+  - 부분 수정(PATCH) DTO처럼 "null은 변경 없음"인 경우 `@NotBlank`를 쓰지 않고 `@Size`/`@Min`처럼 null을 통과시키는 규칙만 적용한다 (`CodeUpdateRequest` 참고)
+  - 교차 필드 규칙(예: 비밀번호 정책)은 클래스 레벨 커스텀 제약으로 처리한다 (`user/validation/StrongPassword` 참고)
+  - 로그인처럼 포맷 정보 유출을 피해야 하는 요청은 `@NotBlank`만 적용한다
 
 ```java
 /**
@@ -114,7 +119,10 @@ public class UserService {
  * @param id 로그인 ID
  * @param pw 비밀번호 (평문, 서비스에서 BCrypt로 인코딩해 저장)
  */
-public record UserJoinRequest(String id, String pw, String userName) {
+public record UserJoinRequest(
+        @NotBlank(message = "아이디는 필수입니다.") @Size(max = 50, message = "아이디는 50자 이하여야 합니다.") String id,
+        @NotBlank(message = "비밀번호는 필수입니다.") @Size(min = 8, max = 72, message = "비밀번호는 8~72자여야 합니다.") String pw,
+        @NotBlank(message = "이름은 필수입니다.") @Size(max = 50, message = "이름은 50자 이하여야 합니다.") String userName) {
 }
 ```
 
@@ -251,7 +259,7 @@ List<CodeTreeResponse> tree = codeService.getTree("MENU");
 | PATCH | `/admin/codes/{groupCode}/{code}` | 이름/설명/정렬/사용여부 수정 (null 필드는 변경 안 함, seed 코드는 거부) |
 | DELETE | `/admin/codes/{groupCode}/{code}` | 비활성화(soft delete, 물리 삭제 없음) — seed 코드·활성 하위 코드 보유 시 거부 |
 
-- 검증 실패는 `IllegalArgumentException`(400)/`IllegalStateException`(409)로 처리되며 `GlobalExceptionHandler`가 공통 응답으로 변환한다.
+- 검증 실패는 `IllegalArgumentException`(400)/`IllegalStateException`(409)로 처리되며 `GlobalExceptionHandler`가 공통 응답으로 변환한다. 요청 본문 형식 검증은 컨트롤러의 `@Valid` + Bean Validation이 담당하며, 실패 시 400 `VALIDATION_ERROR`와 필드별 오류(`fieldErrors`)로 응답한다.
 - 코드 변경 시 `CodeService`가 캐시를 무효화하므로 다음 조회는 변경된 값이 반영된다.
 
 #### 주의사항
@@ -301,7 +309,7 @@ class UserServiceTest {
 
 1. 도메인 패키지 폴더 생성 (`controller/dto/entity/repository/service`)
 2. 엔티티 + 리포지토리 (JPQL로 컬럼 조회 메서드 명시)
-3. 요청/응답 DTO record (응답 DTO에 `from` 팩토리)
+3. 요청/응답 DTO record (응답 DTO에 `from` 팩토리, 요청 DTO에 검증 어노테이션 + 컨트롤러 `@Valid` — §4 참고)
 4. 서비스: `@Transactional` (+readOnly), 표준 예외 throw
 5. 컨트롤러: `ApiResponse.success(...)` 봉투, 얇은 위임
 6. 단위 테스트: 정상 케이스 + 각 예외 케이스
