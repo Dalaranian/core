@@ -27,5 +27,5 @@ management:
         include: health,info
   endpoint:
     health:
-      # DB 등 컴포넌트 상태까지 헬스체크로 확인
-      show-details: always
+      # 익명 요청은 status만, 인증된 요청은 DB 등 컴포넌트 상세까지 노출
+      show-details: when-authorized
