@@ -29,5 +29,3 @@ management:
     health:
       # DB 등 컴포넌트 상태까지 헬스체크로 확인
       show-details: always
-    grace-days: 1
-    delete-cron: "0 0 0 * * *"
