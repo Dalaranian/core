@@ -116,7 +116,7 @@ jwt:
 선택적 개선(P3):
 
 - k8s 사용 시 liveness/readiness probe 노출 검토
-- `show-details: always`는 내부 정보를 드러내므로 외부 노출 환경에서는 `when-authorized` 등으로 조정 검토
+- ✅ `show-details`를 `when-authorized`로 조정 완료 — 익명 요청은 `status`만, 인증된 요청은 DB 등 컴포넌트 상세 노출
 
 ### 4-2. 민감정보 외부화 — 부분 완료
 

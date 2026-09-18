@@ -125,7 +125,7 @@ JWT 인증 뒤에서도 접근 가능하도록 `SecurityConfig`의 `permitAll`�
 
 | 엔드포인트 | 설명 |
 | --- | --- |
-| `GET /actuator/health` | 애플리케이션·DB 등 컴포넌트 상태 (`show-details: always`). 로드밸런서/컴포즈 헬스체크용 |
+| `GET /actuator/health` | 애플리케이션 상태. 익명 요청은 `status`만, 인증 시 DB 등 컴포넌트 상세 노출 (`show-details: when-authorized`). 로드밸런서/컴포즈 헬스체크용 |
 | `GET /actuator/info` | 빌드 정보 등 (기본 비어 있음) |
 
 설정 위치: `application.yaml`의 `management.*`
@@ -138,7 +138,7 @@ management:
         include: health,info
   endpoint:
     health:
-      show-details: always
+      show-details: when-authorized
 ```
 
 `metrics`, `env`, `loggers` 등 민감 정보가 담기는 엔드포인트는 의도적으로 노출하지 않았습니다.
