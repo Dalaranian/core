@@ -47,6 +47,7 @@ public record UserJoinRequest(
 - 생성자 주입: `@RequiredArgsConstructor` + `private final`.
 - 한국어 Javadoc: 메서드는 한 줄 요약, 복잡한 동작은 여러 줄.
 - 경로는 `/api/<복수형 도메인>`. 상태 변경은 POST, 본인 리소스 삭제는 `@DeleteMapping("/me")`.
+  - **관리자 API 예외**: `ROLE_ADMIN` 권한이 필요한 관리 화면용 API는 `/admin/<복수형 도메인>`을 사용한다 (예: `CodeAdminController`의 `/admin/codes`). `SecurityConfig`에서 `/admin/**`을 `hasRole("ADMIN")`으로 보호하며, `DEVELOPMENT_GUIDE.md`의 관리 API 섹션에 엔드포인트를 함께 문서화한다.
 
 ## 4. 서비스
 
