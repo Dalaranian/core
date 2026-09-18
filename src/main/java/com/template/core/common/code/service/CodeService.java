@@ -9,12 +9,17 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.template.core.common.code.dto.CodeCreateRequest;
+import com.template.core.common.code.dto.CodeGroupCreateRequest;
 import com.template.core.common.code.dto.CodeGroupResponse;
 import com.template.core.common.code.dto.CodeTreeResponse;
+import com.template.core.common.code.dto.CodeUpdateRequest;
 import com.template.core.common.code.entity.CodeEntity;
 import com.template.core.common.code.entity.CodeGroupEntity;
 import com.template.core.common.code.repository.CodeGroupRepository;
 import com.template.core.common.code.repository.CodeRepository;
+
+import lombok.RequiredArgsConstructor;
 
 /**
  * 공통 코드 조회/관리 서비스.
@@ -24,6 +29,7 @@ import com.template.core.common.code.repository.CodeRepository;
  * 생성/수정은 createGroup/createCode/updateCode/disableCode 메서드로 제공한다.</p>
  */
 @Service
+@RequiredArgsConstructor
 public class CodeService {
 
     private final CodeGroupRepository codeGroupRepository;
@@ -36,12 +42,8 @@ public class CodeService {
      */
     private volatile Map<String, List<CodeEntity>> cache;
 
-    public CodeService(CodeGroupRepository codeGroupRepository, CodeRepository codeRepository) {
-        this.codeGroupRepository = codeGroupRepository;
-        this.codeRepository = codeRepository;
-    }
-
     /** 그룹+코드값으로 활성 코드를 조회한다. */
+    @Transactional(readOnly = true)
     public Optional<CodeEntity> getCode(String groupCode, String code) {
         return ensureLoaded().getOrDefault(groupCode, List.of()).stream()
                 .filter(c -> c.isUseYn() && c.getCode().equals(code))
@@ -49,6 +51,7 @@ public class CodeService {
     }
 
     /** 특정 코드의 활성 자식 코드를 조회한다. parentCode가 null이면 그룹 1레벨. */
+    @Transactional(readOnly = true)
     public List<CodeEntity> getChildren(String groupCode, String parentCode) {
         return ensureLoaded().getOrDefault(groupCode, List.of()).stream()
                 .filter(c -> c.isUseYn()
@@ -60,28 +63,28 @@ public class CodeService {
     }
 
     /** 그룹의 활성 코드 트리를 조회한다(비즈니스 조회용). */
+    @Transactional(readOnly = true)
     public List<CodeTreeResponse> getTree(String groupCode) {
         return buildTree(groupCode, true);
     }
 
     /** 그룹의 코드 트리를 조회한다. 관리 화면처럼 비활성 코드도 보려면 includeDisabled=true. */
+    @Transactional(readOnly = true)
     public List<CodeTreeResponse> getTree(String groupCode, boolean includeDisabled) {
         return buildTree(groupCode, !includeDisabled);
     }
 
     /** 전체 그룹과 각 그룹의 코드 트리를 조회한다(관리 화면용, 비활성 포함). */
+    @Transactional(readOnly = true)
     public List<CodeGroupResponse> getAllGroups() {
         return codeGroupRepository.findAllByOrderByGroupCodeAsc().stream()
-                .map(group -> new CodeGroupResponse(group, buildTree(group.getGroupCode(), false)))
+                .map(group -> CodeGroupResponse.from(group, buildTree(group.getGroupCode(), false)))
                 .toList();
     }
 
-    /** 새 코드 그룹을 생성한다. */
+    /** 새 코드 그룹을 생성한다. 필수 값 검증은 DTO(Bean Validation)가 담당한다. */
     @Transactional
-    public CodeGroupEntity createGroup(com.template.core.common.code.dto.CodeGroupCreateRequest request) {
-        if (request.groupCode() == null || request.groupCode().isBlank()) {
-            throw new IllegalArgumentException("그룹 식별자(groupCode)는 필수입니다.");
-        }
+    public CodeGroupEntity createGroup(CodeGroupCreateRequest request) {
         codeGroupRepository.findByGroupCode(request.groupCode()).ifPresent(group -> {
             throw new IllegalStateException("이미 존재하는 코드 그룹입니다: " + request.groupCode());
         });
@@ -97,12 +100,9 @@ public class CodeService {
      * 존재해야 하며, 이를 통해 2레벨/3레벨 등 N계층을 구성한다.
      */
     @Transactional
-    public CodeEntity createCode(String groupCode, com.template.core.common.code.dto.CodeCreateRequest request) {
+    public CodeEntity createCode(String groupCode, CodeCreateRequest request) {
         codeGroupRepository.findByGroupCode(groupCode)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 코드 그룹입니다: " + groupCode));
-        if (request.code() == null || request.code().isBlank()) {
-            throw new IllegalArgumentException("코드값(code)은 필수입니다.");
-        }
         if (codeRepository.existsByGroupCodeAndCode(groupCode, request.code())) {
             throw new IllegalStateException("이미 존재하는 코드입니다: " + groupCode + "/" + request.code());
         }
@@ -127,8 +127,7 @@ public class CodeService {
      * enum 유래 시드 코드는 원본 enum이 싱크 원본이므로 수정할 수 없다.
      */
     @Transactional
-    public void updateCode(String groupCode, String code,
-            com.template.core.common.code.dto.CodeUpdateRequest request) {
+    public void updateCode(String groupCode, String code, CodeUpdateRequest request) {
         CodeEntity entity = codeRepository.findByGroupCodeAndCode(groupCode, code)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 코드입니다: " + groupCode + "/" + code));
         if (entity.isSeedYn()) {

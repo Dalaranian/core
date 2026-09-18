@@ -12,7 +12,7 @@ import com.template.core.user.entity.UserEntity;
 public record LoginResponse(String accessToken, String id, String userName) {
 
     /** JWT와 사용자 엔티티로부터 응답 DTO를 생성한다. */
-    public static LoginResponse of(String accessToken, UserEntity user) {
+    public static LoginResponse from(String accessToken, UserEntity user) {
         return new LoginResponse(accessToken, user.getId(), user.getUserName());
     }
 }

@@ -53,7 +53,7 @@ public class UserController {
      */
     @PatchMapping("/me/password")
     public ApiResponse<Void> changePassword(Authentication authentication,
-            @RequestBody ChangePasswordRequest request) {
+            @Valid @RequestBody ChangePasswordRequest request) {
         userService.changePassword(authentication.getName(), request);
         return ApiResponse.success(null);
     }
