@@ -8,7 +8,7 @@
 가입 (POST /api/users)
    │  status = ACTIVE (코드 10)
    ▼
-활성 회원 ──로그인 성공──▶ JWT 발급 (AuthService)
+활성 회원 ──로그인 성공──▶ JWT 발급 (AuthController → UserService)
    │
    │  탈퇴 (DELETE /api/users/me, 비밀번호 재확인)
    ▼

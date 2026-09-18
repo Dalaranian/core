@@ -60,6 +60,9 @@ public class UserController {
 
 ### 매핑 규칙
 
+- 경로는 `/api/<복수형 도메인>` (`/api/users`, `/api/auth`).
+- 상태 변경은 POST, 본인 리소스 삭제는 `@DeleteMapping("/me")`처럼 REST 스타일을 유지한다.
+
 ## 3. 서비스(비즈니스 로직) 작성 규칙
 
 ### 기본 형태
@@ -322,9 +325,3 @@ class UserServiceTest {
 - Lombok은 관례대로 사용하되, 컨트롤러/서비스는 생성자 주입(`@RequiredArgsConstructor`)만.
 - 설정 주입은 `@ConfigurationProperties` 레코드(`JwtProperties`, `WithdrawalProperties` 참고)를 사용하고 `@Value` 개별 주입은 하지 않는다.
 - API 응답/에러 형식을 바꿀 때는 `ApiResponse`, `ErrorResponse`, `GlobalExceptionHandler` 세 파일을 함께 점검한다.
-
-```
-
-
-- 경로는 `/api/<복수형 도메인>` (`/api/users`, `/api/auth`).
-- 상태 변경은 POST, 본인 리소스 삭제는 `@DeleteMapping("/me")`처럼 REST 스타일을 유지한다.

@@ -1,7 +1,7 @@
 # 기획 대비 구현 현황 및 추가 작업
 
 README(기획 문서)와 현재 구현(`src/`)을 비교해 정리한 개발 현황 문서입니다.
-기준 커밋: `54c71da` (fix/auth-login-api-response, 2026-09-15) — **현재 코드 기준으로 작성됨.**
+기준 커밋: `fc1f8c8` (Merge PR #11 feat/change-password) — **현재 코드 기준으로 작성됨.**
 
 ## 1. 구현 현황 요약
 
@@ -10,9 +10,10 @@ README(기획 문서)와 현재 구현(`src/`)을 비교해 정리한 개발 현
 | 공통 예외 처리 | ✅ 완료 | `GlobalExceptionHandler` + `ErrorResponse`/`ApiResponse` 봉투 |
 | 회원 가입/로그인 | ✅ 완료 | JWT 기반 (`JwtService`, `JwtAuthenticationFilter`) |
 | 회원 탈퇴 | ✅ 완료 | 유예 배치(`WithdrawalCleanupScheduler`) + 탈퇴 회원 토큰 차단 포함 |
+| 비밀번호 변경 | ✅ 완료 | `PATCH /api/users/me/password` (기존 비밀번호 확인, 직전 비밀번호 동일 시 400) |
 | 인증 사용자 식별 | ✅ 설계 확정 | `Authentication` 기반 (의도적 설계 — §3 참고) |
 | Actuator | ✅ 완료 | health/info 노출 + `permitAll` |
-| Bean Validation | ✅ 완료 | user/code 전체 요청 DTO + `@Valid` + 400 `VALIDATION_ERROR` 핸들러 (§2-1 참고) |
+| Bean Validation | ✅ 완료 | user/code 요청 DTO + `@Valid` + 400 `VALIDATION_ERROR` 핸들러 (§2-1 참고). `ChangePasswordRequest`는 서비스 레벨 검증 |
 | STG/PROD 프로파일 | ❌ 미완료 | 환경별 설정 파일 필요 (P1) |
 | OAuth2 Client | ⚠️ 기획 확인 필요 | 의존성만 존재, 실제 구현 없음 |
 | HELP.md / compose.yaml | ✅ 정리 완료 | 모두 제거됨, docker-compose 의존성도 제거 |
@@ -22,7 +23,8 @@ README(기획 문서)와 현재 구현(`src/`)을 비교해 정리한 개발 현
 ### 2-1. Bean Validation — ✅ 완료
 
 user 도메인(`UserJoinRequest`, `LoginRequest`, `WithdrawRequest`)과 code 도메인
-(`CodeGroupCreateRequest`, `CodeCreateRequest`, `CodeUpdateRequest`) 전체에 적용 완료.
+(`CodeGroupCreateRequest`, `CodeCreateRequest`, `CodeUpdateRequest`)에 적용 완료.
+(`ChangePasswordRequest`는 `@Valid` 없이 서비스 레벨에서 기존 비밀번호 대조·직전 비밀번호 동일 여부를 검증한다.)
 
 구현 내역:
 
