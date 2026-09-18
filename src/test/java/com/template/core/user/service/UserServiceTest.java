@@ -21,6 +21,7 @@ import com.template.core.security.JwtService;
 import com.template.core.user.entity.UserEntity;
 import com.template.core.user.repository.UserRepository;
 import com.template.core.user.code.UserStatus;
+import com.template.core.user.dto.ChangePasswordRequest;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
 import com.template.core.user.dto.UserJoinRequest;
@@ -210,4 +211,85 @@ class UserServiceTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("사용자를 찾을 수 없습니다");
     }
+
+    @Test
+    @DisplayName("기존 비밀번호가 일치하면 새 비밀번호로 변경된다")
+    void changePassword_WithCorrectOldPw_EncodesAndSavesNewPw() {
+        // given: 활성 회원과 일치하는 기존 비밀번호, 새 비밀번호의 인코딩 결과를 준비한다
+        UserEntity user = UserEntity.builder()
+                .id("iris")
+                .pw("encoded-old-pw")
+                .userName("아이리스")
+                .build();
+        when(userRepository.findByLoginId("iris")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("old-plain", "encoded-old-pw")).thenReturn(true);
+        when(passwordEncoder.matches("new-plain", "encoded-old-pw")).thenReturn(false);
+        when(passwordEncoder.encode("new-plain")).thenReturn("encoded-new-pw");
+
+        // when: 비밀번호를 변경한다
+        userService.changePassword("iris", new ChangePasswordRequest("old-plain", "new-plain"));
+
+        // then: 엔티티의 비밀번호가 인코딩된 새 값으로 바뀌었는지 확인한다
+        assertThat(user.getPw()).isEqualTo("encoded-new-pw");
+    }
+
+    @Test
+    @DisplayName("기존 비밀번호가 틀리면 변경이 거부되고 비밀번호는 유지된다")
+    void changePassword_WithWrongOldPw_ThrowsException() {
+        // given: 기존 비밀번호 대조가 실패한다
+        UserEntity user = UserEntity.builder()
+                .id("jack")
+                .pw("encoded-old-pw")
+                .userName("잭")
+                .build();
+        when(userRepository.findByLoginId("jack")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("wrong-old", "encoded-old-pw")).thenReturn(false);
+
+        // when & then: IllegalArgumentException이 발생하고 비밀번호는 유지된다
+        assertThatThrownBy(() -> userService.changePassword("jack",
+                new ChangePasswordRequest("wrong-old", "new-plain")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("비밀번호가 일치하지 않습니다");
+        assertThat(user.getPw()).isEqualTo("encoded-old-pw");
+    }
+
+    @Test
+    @DisplayName("새 비밀번호가 직전 비밀번호와 동일하면 변경이 거부된다")
+    void changePassword_WithSameAsOldPw_ThrowsException() {
+        // given: 기존 비밀번호는 일치하지만 새 비밀번호가 직전 비밀번호와 동일하다
+        UserEntity user = UserEntity.builder()
+                .id("kate")
+                .pw("encoded-old-pw")
+                .userName("케이트")
+                .build();
+        when(userRepository.findByLoginId("kate")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("old-plain", "encoded-old-pw")).thenReturn(true);
+
+        // when & then: IllegalArgumentException이 발생하고 비밀번호는 유지된다
+        assertThatThrownBy(() -> userService.changePassword("kate",
+                new ChangePasswordRequest("old-plain", "old-plain")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("직전 비밀번호와 동일합니다");
+        assertThat(user.getPw()).isEqualTo("encoded-old-pw");
+    }
+
+    @Test
+    @DisplayName("탈퇴(WITHDRAWN) 상태 회원은 비밀번호를 변경할 수 없다")
+    void changePassword_WithWithdrawnUser_ThrowsException() {
+        // given: 탈퇴 상태 회원을 준비한다
+        UserEntity user = UserEntity.builder()
+                .id("liam")
+                .pw("encoded-pw")
+                .userName("리엄")
+                .build();
+        user.withdraw();
+        when(userRepository.findByLoginId("liam")).thenReturn(Optional.of(user));
+
+        // when & then: IllegalStateException이 발생한다
+        assertThatThrownBy(() -> userService.changePassword("liam",
+                new ChangePasswordRequest("old-plain", "new-plain")))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("이미 탈퇴한 회원입니다");
+    }
 }
+

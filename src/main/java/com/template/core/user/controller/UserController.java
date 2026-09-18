@@ -2,6 +2,7 @@ package com.template.core.user.controller;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -9,6 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.template.core.common.response.ApiResponse;
 import com.template.core.user.service.UserService;
+import com.template.core.user.dto.ChangePasswordRequest;
 import com.template.core.user.dto.UserJoinRequest;
 import com.template.core.user.dto.UserJoinResponse;
 import com.template.core.user.dto.WithdrawRequest;
@@ -41,6 +43,17 @@ public class UserController {
     public ApiResponse<Void> withdraw(Authentication authentication,
             @RequestBody WithdrawRequest request) {
         userService.withdraw(authentication.getName(), request);
+        return ApiResponse.success(null);
+    }
+
+    /**
+     * 비밀번호 변경. 기존 비밀번호로 본인을 확인한 뒤 새 비밀번호로 변경한다.
+     * 새 비밀번호가 직전 비밀번호와 동일하면 400으로 거부된다.
+     */
+    @PatchMapping("/me/password")
+    public ApiResponse<Void> changePassword(Authentication authentication,
+            @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(authentication.getName(), request);
         return ApiResponse.success(null);
     }
 }

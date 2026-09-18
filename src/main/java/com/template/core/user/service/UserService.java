@@ -8,6 +8,7 @@ import com.template.core.security.JwtService;
 import com.template.core.user.entity.UserEntity;
 import com.template.core.user.code.UserStatus;
 import com.template.core.user.repository.UserRepository;
+import com.template.core.user.dto.ChangePasswordRequest;
 import com.template.core.user.dto.LoginRequest;
 import com.template.core.user.dto.LoginResponse;
 import com.template.core.user.dto.UserJoinRequest;
@@ -72,6 +73,38 @@ public class UserService {
         }
 
         user.withdraw();
+    }
+
+    /**
+     * 비밀번호를 변경한다.
+     *
+     * <p>기존 비밀번호 대조로 본인을 확인한 뒤, 새 비밀번호가 직전 비밀번호와
+     * 동일하면 거부하고, 아니면 BCrypt로 인코딩해 저장한다.</p>
+     *
+     * @param loginId 변경 요청 사용자의 로그인 ID (인증 주체)
+     * @param request 기존/새 비밀번호 요청
+     * @throws IllegalArgumentException 사용자가 없거나 기존 비밀번호가 일치하지 않거나 새 비밀번호가 직전 비밀번호와 동일할 때
+     * @throws IllegalStateException 탈퇴(WITHDRAWN) 상태 회원일 때
+     */
+    @Transactional
+    public void changePassword(String loginId, ChangePasswordRequest request) {
+        UserEntity user = userRepository.findByLoginId(loginId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "사용자를 찾을 수 없습니다. id=" + loginId));
+
+        if (user.getStatus() == UserStatus.WITHDRAWN) {
+            throw new IllegalStateException("이미 탈퇴한 회원입니다. id=" + loginId);
+        }
+
+        if (!passwordEncoder.matches(request.oldPw(), user.getPw())) {
+            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+        }
+
+        if (passwordEncoder.matches(request.newPw(), user.getPw())) {
+            throw new IllegalArgumentException("새 비밀번호가 직전 비밀번호와 동일합니다.");
+        }
+
+        user.changePassword(passwordEncoder.encode(request.newPw()));
     }
 
     /**

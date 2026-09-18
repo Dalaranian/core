@@ -78,4 +78,12 @@ public class UserEntity {
         this.status = UserStatus.WITHDRAWN;
         this.withdrawnAt = LocalDateTime.now();
     }
+
+    /**
+     * 비밀번호를 변경한다. 반드시 서비스에서 기존 비밀번호 대조 후
+     * {@code passwordEncoder.encode}로 인코딩된 값을 전달해야 한다.
+     */
+    public void changePassword(String encodedPw) {
+        this.pw = encodedPw;
+    }
 }
