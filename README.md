@@ -7,12 +7,26 @@ REST API 서버를 시작할 때마다 반복 작성하게 되는 공통 코드(
 
 ## 제공되는 보일러플레이트
 
+### 요청 추적
 - **traceId 로깅**: 요청마다 UUID(`traceId`)를 MDC에 주입해 로그 추적 (콘솔/파일 롤링)
+
+### 인증/인가
 - **JWT 인증**: 로그인 시 HS256 토큰 발급, 필터에서 검증 (`JwtService` / `JwtAuthenticationFilter`)
-- **회원 관리 골격**: 가입(`POST /api/users`), 로그인(`POST /api/auth/login`), 탈퇴(`DELETE /api/users/me`)
+- **역할 기반 접근 제어**: `/admin/**` 경로는 `ROLE_ADMIN` 권한 요구 (`SecurityConfig`)
+
+### 회원 관리
+- **회원 관리 골격**: 가입(`POST /api/users`), 로그인(`POST /api/auth/login`), 비밀번호 변경(`PATCH /api/users/me/password`), 탈퇴(`DELETE /api/users/me`)
 - **회원 탈퇴 유예**: 탈퇴 시 즉시 삭제하지 않고 유예 기간 후 매일 자정 배치로 제거 (`WithdrawalCleanupScheduler`)
+
+### 공통 코드 관리
+- **코드 테이블 싱크**: 코드성 enum(`CodeEnum`)을 기동 시 `codes`/`code_groups` 테이블로 upsert (`CodeSyncRunner`, 단방향: enum → DB)
+- **코드 관리 API**: `/admin/codes`에서 그룹/코드 생성·수정·비활성화 (`CodeAdminController`, `ROLE_ADMIN` 필수). enum 유래 시드 코드는 읽기 전용
+
+### 공통 API 규약
 - **공통 응답/에러**: `ApiResponse` 래퍼와 `GlobalExceptionHandler` 표준 에러 응답
 - **입력 검증**: Bean Validation 기반 요청 DTO 검증(`@Valid`) — 실패 시 400 + `VALIDATION_ERROR` + 필드별 오류 메시지, 비밀번호 보안 정책 검증기 포함 (`StrongPasswordValidator`)
+
+### 영속화
 - **SQLite 영속화**: JPA 기반, 별도 DB 설치 없이 바로 동작
 
 ## 기술 스택
@@ -30,6 +44,14 @@ REST API 서버를 시작할 때마다 반복 작성하게 되는 공통 코드(
 src/main/java/com/template/core/
 ├── CoreApplication.java              # Spring Boot 진입점
 ├── common/
+│   ├── code/                         # 공통 코드 관리(코드 테이블)
+│   │   ├── CodeEnum.java             # 코드성 enum 계약(코드 테이블과 싱크)
+│   │   ├── CodeSyncRunner.java       # 기동 시 enum → 코드 테이블 싱크(단방향 upsert)
+│   │   ├── controller/CodeAdminController.java  # /admin/codes 관리 API(ROLE_ADMIN)
+│   │   ├── dto/                      # 코드/그룹 생성·수정 요청·응답 DTO
+│   │   ├── entity/                   # CodeEntity, CodeGroupEntity, CodeId(복합키)
+│   │   ├── repository/               # CodeRepository, CodeGroupRepository
+│   │   └── service/CodeService.java
 │   ├── error/                        # GlobalExceptionHandler, ErrorResponse
 │   └── response/                     # ApiResponse 공통 응답 래퍼
 ├── logging/TraceIdFilter.java        # 요청별 traceId(UUID) MDC 주입 필터
@@ -39,12 +61,13 @@ src/main/java/com/template/core/
 │   ├── JwtProperties.java            # jwt.* 설정 바인딩
 │   └── JwtAuthenticationFilter.java  # Authorization 헤더 토큰 인증 필터
 └── user/
-    ├── controller/                   # UserController(가입/탈퇴), AuthController(로그인)
+    ├── code/                         # UserRole, UserStatus(코드값 enum + DB 컨버터)
+    ├── controller/                   # UserController(가입/비밀번호변경/탈퇴), AuthController(로그인)
     ├── service/                      # UserService, CustomUserDetailsService
     ├── principal/UserPrincipal.java  # UserDetails 어댑터
-    ├── dto/                          # 가입/로그인/탈퇴 요청·응답 DTO
+    ├── dto/                          # 가입/로그인/탈퇴/비밀번호변경 요청·응답 DTO
     ├── validation/                   # 비밀번호 보안 정책 검증기(@StrongPassword)
-    ├── entity/                       # UserEntity, UserStatus
+    ├── entity/                       # UserEntity
     ├── repository/UserRepository.java
     ├── WithdrawalCleanupScheduler.java  # 유예기간 경과 회원 삭제 배치(매일 자정)
     └── WithdrawalProperties.java     # user.withdrawal.* 설정 바인딩
@@ -52,10 +75,11 @@ src/main/resources/
 ├── application.yaml                  # 공통 설정 (프로파일, 로깅, 탈퇴 정책)
 ├── application-dev.yaml              # DEV 전용 (SQLite, JWT 설정)
 └── logback-spring.xml                # 콘솔·파일 롤링 (10MB / 30일 / 1GB)
+Dockerfile                            # 멀티스테이지 빌드 (JDK 빌드 → JRE 런타임)
 ```
 
 테스트는 `src/test/java/com/template/core/` 하위에 주요 컴포넌트별로 위치합니다
-(traceId, JWT 필터, 전역 예외 처리, 회원 서비스, 탈퇴 배치, 컨텍스트 스모크).
+(traceId, JWT 필터, 전역 예외 처리, 회원 서비스, 탈퇴 배치, 코드 싱크/관리, 컨텍스트 스모크).
 
 ## 시작하기
 
@@ -69,7 +93,16 @@ gradlew.bat test
 기본 프로파일은 `dev`(로컬 SQLite, 포트 `8080`)이며, 다른 프로파일은 환경변수로 덮어씁니다:
 `SPRING_PROFILES_ACTIVE=stg gradlew.bat run`
 
-Swagger UI: `http://localhost:8080/swagger-ui.html`
+Swagger UI: `http://localhost:8080/swagger-ui.html` (dev 프로파일에서만 인증 없이 접근 가능)
+
+### Docker
+
+루트의 `Dockerfile`로 멀티스테이지 빌드(JDK 빌드 → JRE 런타임)를 제공합니다:
+
+```bash
+docker build -t core .
+docker run -p 8080:8080 -e JWT_SECRET=<32바이트 이상> core
+```
 
 ## 주요 설정
 
@@ -122,6 +155,7 @@ JWT secret 등 비밀 값은 환경 변수로 주입합니다(`JWT_SECRET` 등).
 1. 이 템플릿을 복사합니다.
 2. `com.template.core` 패키지명과 `settings.gradle`의 프로젝트명을 실제 프로젝트에 맞게 변경합니다.
 3. 이후에는 `Controller` → `Service` → `Repository`에 비즈니스 로직만 작성하면 됩니다.
+4. 코드성 enum을 새로 만들면 `CodeEnum`을 구현하고 `CodeSyncRunner`의 `SEED_CODES`에 상수를 등록하면 기동 시 코드 테이블에 자동 싱크됩니다.
 
 ## 관련 문서
 
