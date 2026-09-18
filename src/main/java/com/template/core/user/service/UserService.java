@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.template.core.security.JwtService;
+import com.template.core.security.LoginRateLimiter;
 import com.template.core.user.entity.UserEntity;
 import com.template.core.user.code.UserStatus;
 import com.template.core.user.repository.UserRepository;
@@ -27,6 +28,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginRateLimiter loginRateLimiter;
 
     /**
      * 회원 가입을 처리한다.
@@ -113,25 +115,39 @@ public class UserService {
      * <p>로그인 ID로 사용자를 찾아 BCrypt로 비밀번호를 대조하고, 성공 시
      * 해당 사용자에게 서명된 JWT를 발급해 반환한다.</p>
      *
+     * <p>브루트포스 방지를 위해 슬라이딩 윈도우 내 실패 한도에 도달한 계정은
+     * 로그인 자체를 거부(429)하고, 실패 시도는 기록하며, 성공 시 기록을 초기화한다.</p>
+     *
      * @param request 로그인 요청 정보
      * @return 발급된 accessToken을 포함한 로그인 응답
+     * @throws TooManyAttemptsException 윈도우 내 로그인 실패 횟수가 한도에 도달한 경우
      * @throws IllegalArgumentException 사용자가 없거나 비밀번호가 일치하지 않을 때
      * @throws IllegalStateException 탈퇴(WITHDRAWN) 상태 회원일 때
      */
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        UserEntity user = userRepository.findByLoginId(request.id())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "사용자를 찾을 수 없습니다. id=" + request.id()));
+        // 잠금 상태(윈도우 내 실패 한도 도달) 계정은 인증 로직 전에 거부한다.
+        // 거부된 시도는 실패 기록에 추가하지 않아 잠금 기간이 무한 연장되지 않는다.
+        loginRateLimiter.check(request.id());
+        try {
+            UserEntity user = userRepository.findByLoginId(request.id())
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "사용자를 찾을 수 없습니다. id=" + request.id()));
 
-        if (user.getStatus() == UserStatus.WITHDRAWN) {
-            throw new IllegalStateException("이미 탈퇴한 회원입니다. id=" + request.id());
+            if (user.getStatus() == UserStatus.WITHDRAWN) {
+                throw new IllegalStateException("이미 탈퇴한 회원입니다. id=" + request.id());
+            }
+
+            if (!passwordEncoder.matches(request.pw(), user.getPw())) {
+                throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
+            }
+
+            loginRateLimiter.recordSuccess(request.id());
+            return LoginResponse.from(jwtService.createToken(user), user);
+        } catch (RuntimeException e) {
+            // 로그인 실패(존재하지 않는 ID/탈퇴 회원/비밀번호 불일치)를 모두 기록한다
+            loginRateLimiter.recordFailure(request.id());
+            throw e;
         }
-
-        if (!passwordEncoder.matches(request.pw(), user.getPw())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
-        }
-
-        return LoginResponse.from(jwtService.createToken(user), user);
     }
 }

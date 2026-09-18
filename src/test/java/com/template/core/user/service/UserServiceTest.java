@@ -3,6 +3,8 @@ package com.template.core.user.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,7 +19,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.template.core.common.error.TooManyAttemptsException;
 import com.template.core.security.JwtService;
+import com.template.core.security.LoginRateLimiter;
 import com.template.core.user.entity.UserEntity;
 import com.template.core.user.repository.UserRepository;
 import com.template.core.user.code.UserStatus;
@@ -45,6 +49,9 @@ class UserServiceTest {
 
     @Mock
     private JwtService jwtService;
+
+    @Mock
+    private LoginRateLimiter loginRateLimiter;
 
     @InjectMocks
     private UserService userService;
@@ -118,10 +125,11 @@ class UserServiceTest {
         // when: 로그인을 실행한다
         LoginResponse response = userService.login(new LoginRequest("carol", "plain-pw"));
 
-        // then: 사용자 정보와 JWT가 담긴 응답을 반환한다
+        // then: 사용자 정보와 JWT가 담긴 응답을 반환하고 실패 기록이 초기화된다
         assertThat(response.id()).isEqualTo("carol");
         assertThat(response.userName()).isEqualTo("캐롤");
         assertThat(response.accessToken()).isEqualTo("header.payload.signature");
+        verify(loginRateLimiter).recordSuccess("carol");
     }
 
     @Test
@@ -136,10 +144,11 @@ class UserServiceTest {
         when(userRepository.findByLoginId("dave")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("wrong-pw", "encoded-pw")).thenReturn(false);
 
-        // when & then: 로그인 시 IllegalArgumentException이 발생한다
+        // when & then: 로그인 시 IllegalArgumentException이 발생하고 실패가 기록된다
         assertThatThrownBy(() -> userService.login(new LoginRequest("dave", "wrong-pw")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("비밀번호가 일치하지 않습니다");
+        verify(loginRateLimiter).recordFailure("dave");
     }
 
     @Test
@@ -194,10 +203,11 @@ class UserServiceTest {
         user.withdraw();
         when(userRepository.findByLoginId("hank")).thenReturn(Optional.of(user));
 
-        // when & then: 로그인 시 IllegalStateException이 발생한다
+        // when & then: 로그인 시 IllegalStateException이 발생하고 실패가 기록된다
         assertThatThrownBy(() -> userService.login(new LoginRequest("hank", "plain-pw")))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("이미 탈퇴한 회원입니다");
+        verify(loginRateLimiter).recordFailure("hank");
     }
 
     @Test
@@ -206,10 +216,24 @@ class UserServiceTest {
         // given: 로그인 ID에 해당하는 회원이 없다
         when(userRepository.findByLoginId("ghost")).thenReturn(Optional.empty());
 
-        // when & then: 로그인 시 IllegalArgumentException이 발생한다
+        // when & then: 로그인 시 IllegalArgumentException이 발생하고 실패가 기록된다
         assertThatThrownBy(() -> userService.login(new LoginRequest("ghost", "pw")))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("사용자를 찾을 수 없습니다");
+        verify(loginRateLimiter).recordFailure("ghost");
+    }
+
+    @Test
+    @DisplayName("로그인 시도 한도에 도달한 계정은 인증 로직 전에 거부된다")
+    void login_WhenRateLimitExceeded_ThrowsTooManyAttempts() {
+        // given: 시도 제한기가 한도 도달(잠금)을 알린다
+        doThrow(new TooManyAttemptsException("로그인 시도가 너무 많습니다."))
+                .when(loginRateLimiter).check("locked");
+
+        // when & then: 사용자 조회조차 없이 TooManyAttemptsException이 발생한다
+        assertThatThrownBy(() -> userService.login(new LoginRequest("locked", "pw")))
+                .isInstanceOf(TooManyAttemptsException.class);
+        verify(userRepository, never()).findByLoginId("locked");
     }
 
     @Test

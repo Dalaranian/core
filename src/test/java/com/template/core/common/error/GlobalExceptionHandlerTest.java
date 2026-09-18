@@ -63,6 +63,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    @DisplayName("TooManyAttemptsException은 429로 변환된다")
+    void tooManyAttempts_Returns429() throws Exception {
+        mockMvc.perform(get("/test/too-many-attempts"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.error.code").value("TOO_MANY_ATTEMPTS"))
+                .andExpect(jsonPath("$.error.message").value("로그인 시도가 너무 많습니다. 900초 후 다시 시도해 주세요."));
+    }
+
+    @Test
     @DisplayName("알 수 없는 예외는 500과 범용 메시지로 변환된다")
     void unexpected_Returns500WithGenericMessage() throws Exception {
         mockMvc.perform(get("/test/unexpected"))
@@ -98,6 +108,11 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/test/illegal-argument")
         public String illegalArgument() {
             throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
+        }
+
+        @GetMapping("/test/too-many-attempts")
+        public String tooManyAttempts() {
+            throw new TooManyAttemptsException("로그인 시도가 너무 많습니다. 900초 후 다시 시도해 주세요.");
         }
 
         @GetMapping("/test/unexpected")

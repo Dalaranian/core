@@ -45,6 +45,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", "요청 값이 올바르지 않습니다.", fieldErrors);
     }
 
+    /** 로그인 무차별 대입(브루트포스) 방지 한도 초과 → 429 Too Many Requests. */
+    @ExceptionHandler(TooManyAttemptsException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTooManyAttempts(TooManyAttemptsException e) {
+        return build(HttpStatus.TOO_MANY_REQUESTS, "TOO_MANY_ATTEMPTS", e.getMessage());
+    }
+
     /** 폴백: 예상하지 못한 예외 → 500. 내부 정보 노출을 막기 위해 범용 메시지로 응답한다. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception e) {
